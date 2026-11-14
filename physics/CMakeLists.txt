@@ -2,6 +2,7 @@
 # Sources will be added by later tasks; physics_placeholder.cpp is used for the skeleton
 add_library(nbody-physics STATIC
     src/body.cpp
+    src/euler_integrator.cpp
 )
 
 set_target_properties(nbody-physics PROPERTIES LINKER_LANGUAGE CXX)
