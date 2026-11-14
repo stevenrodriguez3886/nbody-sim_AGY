@@ -35,23 +35,29 @@
 ```
 nbody-sim_AGY/
 ├── CMakeLists.txt
-├── include/
-│   ├── body.hpp
-│   ├── physics_world.hpp
-│   ├── integrator.hpp
-│   ├── euler_integrator.hpp
-│   ├── rk4_integrator.hpp
-│   ├── sim_config.hpp
-│   ├── sim_presets.hpp
-│   └── simulation_app.hpp
-├── src/
-│   ├── main.cpp
-│   ├── body.cpp
-│   ├── physics_world.cpp
-│   ├── euler_integrator.cpp
-│   ├── rk4_integrator.cpp
-│   ├── sim_presets.cpp
-│   └── simulation_app.cpp
+├── physics/
+│   ├── CMakeLists.txt
+│   ├── include/
+│   │   ├── body.hpp
+│   │   ├── physics_world.hpp
+│   │   ├── integrator.hpp
+│   │   ├── euler_integrator.hpp
+│   │   ├── rk4_integrator.hpp
+│   │   └── sim_config.hpp
+│   └── src/
+│       ├── body.cpp
+│       ├── physics_world.cpp
+│       ├── euler_integrator.cpp
+│       └── rk4_integrator.cpp
+├── app/
+│   ├── CMakeLists.txt
+│   ├── include/
+│   │   ├── simulation_app.hpp
+│   │   └── sim_presets.hpp
+│   └── src/
+│       ├── main.cpp
+│       ├── simulation_app.cpp
+│       └── sim_presets.cpp
 ├── tests/
 │   ├── CMakeLists.txt
 │   ├── test_body.cpp
@@ -64,17 +70,23 @@ nbody-sim_AGY/
             └── 2026-11-14-nbody-simulator.md  (this file)
 ```
 
+**Separation rationale:** The `physics/` directory produces a static library target (`nbody-physics`) that depends only on `sfml-system` (for `sf::Vector2f`). It has zero dependency on SFML graphics/windowing. The `app/` directory produces the executable (`nbody-sim`) that links `nbody-physics` and `sfml-graphics`/`sfml-window`. Tests for physics link only against `nbody-physics`, so they build and run without a display server or GPU.
+
 **Responsibilities:**
-- `sim_config.hpp` — `SimConfig` struct holding all tunables (G, ε, dt, window size, integrator choice, preset choice).
-- `body.hpp / .cpp` — `Body` struct and its merge operation.
-- `integrator.hpp` — Abstract `IIntegrator` interface.
-- `euler_integrator.hpp / .cpp` — Explicit Euler implementation.
-- `rk4_integrator.hpp / .cpp` — Classical RK4 implementation.
-- `physics_world.hpp / .cpp` — Owns `std::vector<Body>`, computes pairwise forces, delegates to integrator, handles collisions.
-- `sim_presets.hpp / .cpp` — Factory functions that return `std::vector<Body>` for each preset scenario.
-- `simulation_app.hpp / .cpp` — SFML window, event loop, fixed-timestep accumulator, HUD rendering, coordinate transforms.
-- `main.cpp` — Parses command-line args, constructs `SimulationApp`, calls `run()`.
-- `tests/` — Lightweight test harness (no framework; each `test_*.cpp` is a separate executable with `assert` macros returning 0 on success, non-zero on failure).
+- **`physics/` — pure computation, no rendering:**
+  - `sim_config.hpp` — `SimConfig` struct holding all tunables (G, ε, dt, window size, integrator choice, preset choice).
+  - `body.hpp / .cpp` — `Body` struct and its merge operation.
+  - `integrator.hpp` — Abstract `IIntegrator` interface.
+  - `euler_integrator.hpp / .cpp` — Explicit Euler implementation.
+  - `rk4_integrator.hpp / .cpp` — Classical RK4 implementation.
+  - `physics_world.hpp / .cpp` — Owns `std::vector<Body>`, computes pairwise forces, delegates to integrator, handles collisions.
+- **`app/` — UI, rendering, and application wiring:**
+  - `sim_presets.hpp / .cpp` — Factory functions that return `std::vector<Body>` for each preset scenario.
+  - `simulation_app.hpp / .cpp` — SFML window, event loop, fixed-timestep accumulator, HUD rendering, coordinate transforms.
+  - `main.cpp` — Parses command-line args, constructs `SimulationApp`, calls `run()`.
+- **`tests/` — all test executables:**
+  - `test_body`, `test_physics`, `test_integrators` link only `nbody-physics` (no SFML graphics).
+  - `test_presets` links `nbody-physics` (presets create `Body` vectors but don't need rendering).
 
 ---
 
@@ -166,15 +178,16 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 1: CMake Build System and Project Skeleton
 
 **Files:**
-- Create: `CMakeLists.txt`
-- Create: `src/main.cpp`
-- Create: `include/sim_config.hpp`
+- Create: `CMakeLists.txt` (top-level)
+- Create: `physics/CMakeLists.txt`
+- Create: `physics/include/sim_config.hpp`
+- Create: `app/CMakeLists.txt`
+- Create: `app/src/main.cpp`
 - Create: `tests/CMakeLists.txt`
-- Create: `tests/test_body.cpp` (placeholder)
 
 **Interfaces:**
 - Consumes: nothing (first task)
-- Produces: A buildable CMake project. `SimConfig` struct used by all later tasks:
+- Produces: A buildable CMake project with two targets: `nbody-physics` (static library) and `nbody-sim` (executable). `SimConfig` struct used by all later tasks:
   ```cpp
   struct SimConfig {
       float G = 1.0f;
@@ -188,48 +201,61 @@ Collision detection runs **after** each integration step. Process collisions ite
   };
   ```
 
-- [ ] **Step 1: Create `CMakeLists.txt`**
+- [ ] **Step 1: Create top-level `CMakeLists.txt`**
 
-  Top-level CMake file. Requirements:
+  Requirements:
   - `cmake_minimum_required(VERSION 3.22)`
   - Project name `nbody-sim`, language `CXX`
   - `CMAKE_CXX_STANDARD 17`, `CMAKE_CXX_STANDARD_REQUIRED ON`
   - `FetchContent_Declare` for SFML with `GIT_REPOSITORY https://github.com/SFML/SFML.git`, `GIT_TAG 3.0.0`, `GIT_SHALLOW ON`
   - Set `BUILD_SHARED_LIBS OFF` before `FetchContent_MakeAvailable(SFML)`
-  - `add_executable(nbody-sim src/main.cpp)`
-  - `target_include_directories(nbody-sim PRIVATE ${CMAKE_SOURCE_DIR}/include)`
-  - `target_link_libraries(nbody-sim PRIVATE sfml-graphics sfml-window sfml-system)`
-  - `target_compile_options(nbody-sim PRIVATE -Wall -Wextra -Wpedantic)` guarded by `if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")`
+  - Compiler warnings: `add_compile_options(-Wall -Wextra -Wpedantic)` guarded by `if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")`
+  - `add_subdirectory(physics)`
+  - `add_subdirectory(app)`
   - `add_subdirectory(tests)`
 
-- [ ] **Step 2: Create `include/sim_config.hpp`**
+- [ ] **Step 2: Create `physics/CMakeLists.txt`**
+
+  Defines a static library target `nbody-physics` with no source files yet (add a placeholder comment). Key settings:
+  - `add_library(nbody-physics STATIC)` (sources added by later tasks)
+  - `target_include_directories(nbody-physics PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)`
+  - `target_link_libraries(nbody-physics PUBLIC SFML::System)` — physics depends only on `sfml-system` for `sf::Vector2f`
+  - For now, since no `.cpp` files exist yet, add a comment noting sources will be added. The library won't actually compile until Task 2 adds source files. To allow the skeleton to build, set `LINKER_LANGUAGE CXX` on the target.
+
+- [ ] **Step 3: Create `physics/include/sim_config.hpp`**
 
   Header-only struct as specified in Produces above. Include `<string>` and `<cstdint>`. Use `#pragma once`.
 
-- [ ] **Step 3: Create `src/main.cpp`**
+- [ ] **Step 4: Create `app/CMakeLists.txt`**
+
+  Defines the executable target:
+  - `add_executable(nbody-sim src/main.cpp)`
+  - `target_include_directories(nbody-sim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)`
+  - `target_link_libraries(nbody-sim PRIVATE nbody-physics sfml-graphics sfml-window sfml-system)`
+
+- [ ] **Step 5: Create `app/src/main.cpp`**
 
   Minimal main that constructs a `SimConfig`, prints "N-body simulator starting..." to stdout, and returns 0. Include `sim_config.hpp` and `<iostream>`.
 
-- [ ] **Step 4: Create `tests/CMakeLists.txt`**
+- [ ] **Step 6: Create `tests/CMakeLists.txt`**
 
   Placeholder that defines no targets yet. Add a comment `# Test targets added by later tasks`.
 
-- [ ] **Step 5: Build and verify**
+- [ ] **Step 7: Build and verify**
 
   ```bash
   cmake -B build -DCMAKE_BUILD_TYPE=Debug
   cmake --build build
-  ./build/nbody-sim
+  ./build/app/nbody-sim
   ```
   Expected: prints "N-body simulator starting..." and exits 0. SFML fetches and links successfully.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
   ```bash
-  git init
   echo "build/" > .gitignore
-  git add CMakeLists.txt include/ src/ tests/ .gitignore docs/
-  git commit -m "feat: cmake skeleton with SFML 3 FetchContent and SimConfig"
+  git add CMakeLists.txt physics/ app/ tests/ .gitignore docs/
+  git commit -m "feat: cmake skeleton with physics lib, app exe, and SFML 3 FetchContent"
   ```
 
 ---
@@ -237,10 +263,10 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 2: Body Struct and Merge Operation
 
 **Files:**
-- Create: `include/body.hpp`
-- Create: `src/body.cpp`
-- Create: `tests/test_body.cpp` (replace placeholder)
-- Modify: `CMakeLists.txt` — add `src/body.cpp` to `nbody-sim` sources
+- Create: `physics/include/body.hpp`
+- Create: `physics/src/body.cpp`
+- Create: `tests/test_body.cpp`
+- Modify: `physics/CMakeLists.txt` — add `src/body.cpp` to `nbody-physics` sources
 - Modify: `tests/CMakeLists.txt` — add `test_body` executable
 
 **Interfaces:**
@@ -302,15 +328,14 @@ Collision detection runs **after** each integration step. Process collisions ite
 
 - [ ] **Step 3: Implement `Body`, `merge`, `check_collision`**
 
-  In `include/body.hpp`: define the `Body` struct and declare the two free functions. In `src/body.cpp`: implement them per the merge math in the Mathematical Specifications section. Use `std::hypot` or manual `std::sqrt(dx*dx + dy*dy)` for distance in `check_collision`.
+  In `physics/include/body.hpp`: define the `Body` struct and declare the two free functions. In `physics/src/body.cpp`: implement them per the merge math in the Mathematical Specifications section. Use `std::hypot` or manual `std::sqrt(dx*dx + dy*dy)` for distance in `check_collision`.
 
-- [ ] **Step 4: Update `CMakeLists.txt`**
+- [ ] **Step 4: Update build files**
 
-  Add `src/body.cpp` to the `nbody-sim` target's source list. In `tests/CMakeLists.txt`, add:
+  In `physics/CMakeLists.txt`: add `src/body.cpp` to the `nbody-physics` target's source list. In `tests/CMakeLists.txt`, add:
   ```cmake
-  add_executable(test_body test_body.cpp ../src/body.cpp)
-  target_include_directories(test_body PRIVATE ${CMAKE_SOURCE_DIR}/include)
-  target_link_libraries(test_body PRIVATE sfml-system)
+  add_executable(test_body test_body.cpp)
+  target_link_libraries(test_body PRIVATE nbody-physics)
   ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -324,7 +349,7 @@ Collision detection runs **after** each integration step. Process collisions ite
 - [ ] **Step 6: Commit**
 
   ```bash
-  git add include/body.hpp src/body.cpp tests/test_body.cpp tests/CMakeLists.txt CMakeLists.txt
+  git add physics/include/body.hpp physics/src/body.cpp tests/test_body.cpp tests/CMakeLists.txt physics/CMakeLists.txt
   git commit -m "feat: Body struct with merge and collision detection"
   ```
 
@@ -333,11 +358,11 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 3: Integrator Interface and Explicit Euler
 
 **Files:**
-- Create: `include/integrator.hpp`
-- Create: `include/euler_integrator.hpp`
-- Create: `src/euler_integrator.cpp`
+- Create: `physics/include/integrator.hpp`
+- Create: `physics/include/euler_integrator.hpp`
+- Create: `physics/src/euler_integrator.cpp`
 - Create: `tests/test_integrators.cpp`
-- Modify: `CMakeLists.txt` — add `src/euler_integrator.cpp`
+- Modify: `physics/CMakeLists.txt` — add `src/euler_integrator.cpp` to `nbody-physics`
 - Modify: `tests/CMakeLists.txt` — add `test_integrators`
 
 **Interfaces:**
@@ -389,16 +414,21 @@ Collision detection runs **after** each integration step. Process collisions ite
 
   Expected: linker error (EulerIntegrator not defined).
 
-- [ ] **Step 3: Implement `IIntegrator` in `include/integrator.hpp`**
+- [ ] **Step 3: Implement `IIntegrator` in `physics/include/integrator.hpp`**
 
   Pure abstract class as specified in Produces. Include `<vector>`, `<functional>`, `body.hpp`, `<SFML/System/Vector2.hpp>`.
 
 - [ ] **Step 4: Implement `EulerIntegrator`**
 
-  In `include/euler_integrator.hpp`: declare the class inheriting `IIntegrator`. In `src/euler_integrator.cpp`: implement `step()`. Extract all positions and masses from bodies, call `accel_fn`, then for each body: `v += dt * a`, `x += dt * v_old` (compute both updates before writing position, or save old velocity first).
+  In `physics/include/euler_integrator.hpp`: declare the class inheriting `IIntegrator`. In `physics/src/euler_integrator.cpp`: implement `step()`. Extract all positions and masses from bodies, call `accel_fn`, then for each body: `v += dt * a`, `x += dt * v_old` (compute both updates before writing position, or save old velocity first).
 
 - [ ] **Step 5: Update build files, run tests**
 
+  Add `src/euler_integrator.cpp` to `nbody-physics` sources in `physics/CMakeLists.txt`. In `tests/CMakeLists.txt`:
+  ```cmake
+  add_executable(test_integrators test_integrators.cpp)
+  target_link_libraries(test_integrators PRIVATE nbody-physics)
+  ```
   ```bash
   cmake --build build
   ./build/tests/test_integrators
@@ -408,7 +438,7 @@ Collision detection runs **after** each integration step. Process collisions ite
 - [ ] **Step 6: Commit**
 
   ```bash
-  git add include/integrator.hpp include/euler_integrator.hpp src/euler_integrator.cpp tests/test_integrators.cpp CMakeLists.txt tests/CMakeLists.txt
+  git add physics/include/integrator.hpp physics/include/euler_integrator.hpp physics/src/euler_integrator.cpp tests/test_integrators.cpp physics/CMakeLists.txt tests/CMakeLists.txt
   git commit -m "feat: IIntegrator interface and EulerIntegrator"
   ```
 
@@ -417,10 +447,10 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 4: RK4 Integrator
 
 **Files:**
-- Create: `include/rk4_integrator.hpp`
-- Create: `src/rk4_integrator.cpp`
+- Create: `physics/include/rk4_integrator.hpp`
+- Create: `physics/src/rk4_integrator.cpp`
 - Modify: `tests/test_integrators.cpp` — add RK4 test
-- Modify: `CMakeLists.txt` — add `src/rk4_integrator.cpp`
+- Modify: `physics/CMakeLists.txt` — add `src/rk4_integrator.cpp` to `nbody-physics`
 
 **Interfaces:**
 - Consumes: `IIntegrator` from Task 3, `AccelerationFn` type from Task 3
@@ -508,7 +538,7 @@ Collision detection runs **after** each integration step. Process collisions ite
 - [ ] **Step 5: Commit**
 
   ```bash
-  git add include/rk4_integrator.hpp src/rk4_integrator.cpp tests/test_integrators.cpp CMakeLists.txt
+  git add physics/include/rk4_integrator.hpp physics/src/rk4_integrator.cpp tests/test_integrators.cpp physics/CMakeLists.txt
   git commit -m "feat: RK4Integrator with convergence test"
   ```
 
@@ -517,10 +547,10 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 5: PhysicsWorld — Gravity, Integration, and Collisions
 
 **Files:**
-- Create: `include/physics_world.hpp`
-- Create: `src/physics_world.cpp`
+- Create: `physics/include/physics_world.hpp`
+- Create: `physics/src/physics_world.cpp`
 - Create: `tests/test_physics.cpp`
-- Modify: `CMakeLists.txt` — add `src/physics_world.cpp`
+- Modify: `physics/CMakeLists.txt` — add `src/physics_world.cpp` to `nbody-physics`
 - Modify: `tests/CMakeLists.txt` — add `test_physics`
 
 **Interfaces:**
@@ -624,7 +654,7 @@ Collision detection runs **after** each integration step. Process collisions ite
 - [ ] **Step 5: Commit**
 
   ```bash
-  git add include/physics_world.hpp src/physics_world.cpp tests/test_physics.cpp CMakeLists.txt tests/CMakeLists.txt
+  git add physics/include/physics_world.hpp physics/src/physics_world.cpp tests/test_physics.cpp physics/CMakeLists.txt tests/CMakeLists.txt
   git commit -m "feat: PhysicsWorld with gravity, integration, and collision merging"
   ```
 
@@ -633,10 +663,10 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 6: Simulation Presets
 
 **Files:**
-- Create: `include/sim_presets.hpp`
-- Create: `src/sim_presets.cpp`
+- Create: `app/include/sim_presets.hpp`
+- Create: `app/src/sim_presets.cpp`
 - Create: `tests/test_presets.cpp`
-- Modify: `CMakeLists.txt` — add `src/sim_presets.cpp`
+- Modify: `app/CMakeLists.txt` — add `src/sim_presets.cpp` to `nbody-sim`
 - Modify: `tests/CMakeLists.txt` — add `test_presets`
 
 **Interfaces:**
@@ -696,8 +726,15 @@ Collision detection runs **after** each integration step. Process collisions ite
 - [ ] **Step 5: Commit**
 
   ```bash
-  git add include/sim_presets.hpp src/sim_presets.cpp tests/test_presets.cpp CMakeLists.txt tests/CMakeLists.txt
+  git add app/include/sim_presets.hpp app/src/sim_presets.cpp tests/test_presets.cpp app/CMakeLists.txt tests/CMakeLists.txt
   git commit -m "feat: simulation presets (orbit, solar, random cloud)"
+  ```
+
+  Note: `test_presets` links `nbody-physics` (presets produce `Body` vectors, no SFML graphics needed). In `tests/CMakeLists.txt`:
+  ```cmake
+  add_executable(test_presets test_presets.cpp ../app/src/sim_presets.cpp)
+  target_include_directories(test_presets PRIVATE ${CMAKE_SOURCE_DIR}/app/include)
+  target_link_libraries(test_presets PRIVATE nbody-physics)
   ```
 
 ---
@@ -705,10 +742,10 @@ Collision detection runs **after** each integration step. Process collisions ite
 ## Task 7: SimulationApp — SFML 3 Window, Event Loop, Rendering, and HUD
 
 **Files:**
-- Create: `include/simulation_app.hpp`
-- Create: `src/simulation_app.cpp`
-- Modify: `src/main.cpp` — replace placeholder with full app launch
-- Modify: `CMakeLists.txt` — add `src/simulation_app.cpp` and `src/sim_presets.cpp` to sources
+- Create: `app/include/simulation_app.hpp`
+- Create: `app/src/simulation_app.cpp`
+- Modify: `app/src/main.cpp` — replace placeholder with full app launch
+- Modify: `app/CMakeLists.txt` — add `src/simulation_app.cpp` and `src/sim_presets.cpp` to sources
 
 **Interfaces:**
 - Consumes: `PhysicsWorld` (Task 5), `SimConfig` (Task 1), presets (Task 6), `Body` (Task 2)
@@ -822,7 +859,7 @@ Collision detection runs **after** each integration step. Process collisions ite
   }
   ```
 
-- [ ] **Step 6: Update `src/main.cpp`**
+- [ ] **Step 6: Update `app/src/main.cpp`**
 
   Parse command-line arguments for integrator and preset selection:
   ```
@@ -830,38 +867,36 @@ Collision detection runs **after** each integration step. Process collisions ite
   ```
   Default: `euler`, `orbit`. Construct `SimConfig` from args, create `SimulationApp`, call `run()`.
 
-- [ ] **Step 7: Update `CMakeLists.txt` sources**
+- [ ] **Step 7: Update `app/CMakeLists.txt` sources**
 
-  The `nbody-sim` target sources should be:
+  The `nbody-sim` target sources and links should be:
   ```cmake
   add_executable(nbody-sim
       src/main.cpp
-      src/body.cpp
-      src/euler_integrator.cpp
-      src/rk4_integrator.cpp
-      src/physics_world.cpp
       src/sim_presets.cpp
       src/simulation_app.cpp
   )
+  target_include_directories(nbody-sim PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+  target_link_libraries(nbody-sim PRIVATE nbody-physics sfml-graphics sfml-window sfml-system)
   ```
 
 - [ ] **Step 8: Build, run, and visually verify**
 
   ```bash
   cmake --build build
-  ./build/nbody-sim --integrator rk4 --preset orbit
+  ./build/app/nbody-sim --integrator rk4 --preset orbit
   ```
   Expected: Window opens. Two bodies visible. One orbits the other. Space pauses/resumes. Escape closes window. HUD shows FPS, UPS, body count. No crash.
 
   ```bash
-  ./build/nbody-sim --integrator euler --preset random
+  ./build/app/nbody-sim --integrator euler --preset random
   ```
   Expected: Random cloud of bodies. Bodies attract each other, merge on collision. Body count decreases over time.
 
 - [ ] **Step 9: Commit**
 
   ```bash
-  git add include/simulation_app.hpp src/simulation_app.cpp src/main.cpp CMakeLists.txt
+  git add app/include/simulation_app.hpp app/src/simulation_app.cpp app/src/main.cpp app/CMakeLists.txt
   git commit -m "feat: SimulationApp with SFML 3 rendering, fixed-timestep loop, HUD, and CLI args"
   ```
 
@@ -871,7 +906,7 @@ Collision detection runs **after** each integration step. Process collisions ite
 
 **Files:**
 - Modify: `tests/test_physics.cpp` — add orbit stability test
-- Modify: `src/simulation_app.cpp` — any polish fixes
+- Modify: `app/src/simulation_app.cpp` — any polish fixes
 
 **Interfaces:**
 - Consumes: all prior tasks
@@ -917,11 +952,11 @@ Collision detection runs **after** each integration step. Process collisions ite
 - [ ] **Step 3: Run the full application with each preset and integrator combination**
 
   ```bash
-  ./build/nbody-sim --integrator euler --preset orbit
-  ./build/nbody-sim --integrator rk4 --preset orbit
-  ./build/nbody-sim --integrator rk4 --preset solar
-  ./build/nbody-sim --integrator euler --preset random
-  ./build/nbody-sim --integrator rk4 --preset random
+  ./build/app/nbody-sim --integrator euler --preset orbit
+  ./build/app/nbody-sim --integrator rk4 --preset orbit
+  ./build/app/nbody-sim --integrator rk4 --preset solar
+  ./build/app/nbody-sim --integrator euler --preset random
+  ./build/app/nbody-sim --integrator rk4 --preset random
   ```
   Verify for each: window opens, bodies render, physics runs, pause works, HUD displays, window closes cleanly.
 
