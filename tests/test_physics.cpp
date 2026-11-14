@@ -204,14 +204,59 @@ void test_set_bodies_and_accessors() {
     assert(world.bodies()[1].id == 2);
 }
 
+void test_circular_orbit_stability_rk4() {
+    SimConfig cfg;
+    cfg.G = 1.0f;
+    cfg.epsilon = 0.1f;
+    cfg.dt = 0.001f;
+    cfg.integrator = "rk4";
+    PhysicsWorld world(cfg);
+    float M = 10000.f, m = 1.f, d = 200.f;
+    float v_orbit = std::sqrt(cfg.G * M / d);
+    world.set_bodies({
+        {1, M, {400.f, 360.f}, {0.f, 0.f}, 10.f},
+        {2, m, {400.f + d, 360.f}, {0.f, v_orbit}, 2.f}
+    });
+    float initial_dist = d;
+    // Run for many steps (~1 orbit period)
+    int steps = static_cast<int>(2.0f * 3.14159f * d / v_orbit / cfg.dt);
+    for (int i = 0; i < steps; ++i) {
+        world.step();
+    }
+    // After one full orbit, distance from center should be close to initial
+    auto& b = world.bodies();
+    assert(b.size() == 2);
+    float dx = b[1].position.x - b[0].position.x;
+    float dy = b[1].position.y - b[0].position.y;
+    float final_dist = std::sqrt(dx*dx + dy*dy);
+    // Allow 5% deviation for RK4 with this dt
+    assert(std::abs(final_dist - initial_dist) / initial_dist < 0.05f);
+}
+
+void test_zero_bodies_safety() {
+    for (const auto& integrator : {"euler", "rk4"}) {
+        SimConfig cfg;
+        cfg.integrator = integrator;
+        PhysicsWorld world(cfg);
+        world.set_bodies({});
+        for (int i = 0; i < 10; ++i) {
+            world.step();
+        }
+        assert(world.body_count() == 0);
+        assert(world.bodies().empty());
+    }
+}
+
 int main() {
     test_two_body_attraction_euler();
     test_two_body_attraction_rk4();
+    test_circular_orbit_stability_rk4();
     test_collision_merge_reduces_count();
     test_collision_chain_merge();
     test_single_body_no_crash();
     test_single_body_euler();
     test_empty_world();
+    test_zero_bodies_safety();
     test_zero_mass_body();
     test_collision_non_colliding_bodies();
     test_integrator_default_fallback();

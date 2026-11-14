@@ -31,6 +31,8 @@ SimulationApp::SimulationApp(SimConfig config)
     : config_(std::move(config)),
       world_(config_),
       window_(sf::VideoMode({config_.window_width, config_.window_height}), "N-Body Simulator") {
+    window_.setFramerateLimit(60);
+    window_.setKeyRepeatEnabled(false);
     
     // Candidate system font paths
     const std::vector<std::string> font_candidates = {
