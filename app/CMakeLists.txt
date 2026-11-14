@@ -1,4 +1,8 @@
-add_executable(nbody-sim src/main.cpp)
+add_executable(nbody-sim
+    src/main.cpp
+    src/sim_presets.cpp
+)
+
 
 target_include_directories(nbody-sim PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
