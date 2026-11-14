@@ -24,4 +24,6 @@ FetchContent_MakeAvailable(SFML)
 
 add_subdirectory(physics)
 add_subdirectory(app)
+
+enable_testing()
 add_subdirectory(tests)

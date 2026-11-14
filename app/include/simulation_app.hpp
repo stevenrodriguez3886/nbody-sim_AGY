@@ -30,7 +30,7 @@ private:
     unsigned int fps_display_ = 0;
 
     void handle_events();
-    void update(float dt);
+    void update();
     void render();
     void draw_hud();
     sf::Vector2f world_to_screen(sf::Vector2f world_pos) const;

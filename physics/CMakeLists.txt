@@ -1,5 +1,4 @@
 # Static library target for physics engine
-# Sources will be added by later tasks; physics_placeholder.cpp is used for the skeleton
 add_library(nbody-physics STATIC
     src/body.cpp
     src/euler_integrator.cpp

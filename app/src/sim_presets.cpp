@@ -123,8 +123,8 @@ std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
     for (size_t i = 0; i < num_particles; ++i) {
         const uint64_t id = static_cast<uint64_t>(i + 1);
         const float mass = dist_m(gen);
-        const sf::Vector2f pos(dist_x(gen), dist_y(gen));
-        const sf::Vector2f vel(dist_v(gen), dist_v(gen));
+        const sf::Vector2f pos{dist_x(gen), dist_y(gen)};
+        const sf::Vector2f vel{dist_v(gen), dist_v(gen)};
         const float radius = 2.0f * std::cbrt(mass);
 
         bodies.push_back(Body{id, mass, pos, vel, radius});

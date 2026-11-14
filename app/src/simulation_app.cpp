@@ -80,8 +80,7 @@ void SimulationApp::handle_events() {
     }
 }
 
-void SimulationApp::update(float dt) {
-    (void)dt;
+void SimulationApp::update() {
     world_.step();
 }
 
@@ -153,7 +152,7 @@ void SimulationApp::run() {
         if (!paused_) {
             accumulator += frame_time;
             while (accumulator >= physics_dt) {
-                update(dt);
+                update();
                 accumulator -= physics_dt;
                 ++ups_count_;
             }
