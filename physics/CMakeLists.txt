@@ -4,6 +4,7 @@ add_library(nbody-physics STATIC
     src/body.cpp
     src/euler_integrator.cpp
     src/rk4_integrator.cpp
+    src/physics_world.cpp
 )
 
 set_target_properties(nbody-physics PROPERTIES LINKER_LANGUAGE CXX)
