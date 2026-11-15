@@ -1,5 +1,6 @@
 add_executable(nbody-sim
     src/main.cpp
+    src/menu_bar.cpp
     src/sim_presets.cpp
     src/simulation_app.cpp
     src/starfield.cpp
