@@ -1,0 +1,50 @@
+#include "simulation_app.hpp"
+
+#include <cassert>
+#include <iostream>
+
+void test_app_initialization_and_reset() {
+    SimConfig cfg;
+    cfg.window_width = 800;
+    cfg.window_height = 600;
+    cfg.preset = "orbit";
+    cfg.integrator = "euler";
+    cfg.dt = 0.001f;
+
+    SimulationApp app(cfg);
+    assert(app.world().body_count() == 2);
+    assert(!app.is_paused());
+
+    // Test scenario resetting
+    app.reset_preset("solar");
+    assert(app.world().body_count() == 6);
+
+    app.reset_preset("random");
+    assert(app.world().body_count() >= 50);
+
+    // Test integrator swapping on app world
+    app.world_mut().set_integrator("rk4");
+    assert(app.world().integrator_name() == "rk4");
+
+    // Test timestep updating
+    app.world_mut().set_dt(0.005f);
+    assert(app.world().dt() == 0.005f);
+
+    // Test window title generation / update without crash
+    app.update_title_bar(sf::seconds(1.0f));
+
+    // Test world-to-screen coordinate mapping
+    const sf::Vector2f screen = app.world_to_screen({100.0f, 200.0f});
+    assert(screen.x == 100.0f);
+    assert(screen.y == 200.0f + app.menu_bar().height());
+
+    // Test headless world step
+    app.world_mut().step();
+    assert(app.world().body_count() >= 50);
+}
+
+int main() {
+    test_app_initialization_and_reset();
+    std::cout << "All simulation app integration tests passed\n";
+    return 0;
+}

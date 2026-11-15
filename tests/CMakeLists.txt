@@ -24,3 +24,20 @@ add_executable(test_menu_bar test_menu_bar.cpp ../app/src/menu_bar.cpp)
 target_include_directories(test_menu_bar PRIVATE ${CMAKE_SOURCE_DIR}/app/include)
 target_link_libraries(test_menu_bar PRIVATE sfml-graphics sfml-window sfml-system)
 add_test(NAME test_menu_bar COMMAND test_menu_bar)
+
+add_executable(test_simulation_app
+    test_simulation_app.cpp
+    ../app/src/simulation_app.cpp
+    ../app/src/sim_presets.cpp
+    ../app/src/starfield.cpp
+    ../app/src/menu_bar.cpp
+)
+target_include_directories(test_simulation_app PRIVATE ${CMAKE_SOURCE_DIR}/app/include)
+target_link_libraries(test_simulation_app PRIVATE
+    nbody-physics
+    sfml-graphics
+    sfml-window
+    sfml-system
+)
+add_test(NAME test_simulation_app COMMAND test_simulation_app)
+
