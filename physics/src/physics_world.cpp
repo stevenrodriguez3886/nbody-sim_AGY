@@ -7,6 +7,15 @@
 
 PhysicsWorld::PhysicsWorld(SimConfig config)
     : config_(std::move(config)) {
+    set_integrator(config_.integrator);
+}
+
+void PhysicsWorld::set_bodies(std::vector<Body> bodies) {
+    bodies_ = std::move(bodies);
+}
+
+void PhysicsWorld::set_integrator(const std::string& name) {
+    config_.integrator = name;
     if (config_.integrator == "rk4") {
         integrator_ = std::make_unique<RK4Integrator>();
     } else {
@@ -14,8 +23,16 @@ PhysicsWorld::PhysicsWorld(SimConfig config)
     }
 }
 
-void PhysicsWorld::set_bodies(std::vector<Body> bodies) {
-    bodies_ = std::move(bodies);
+const std::string& PhysicsWorld::integrator_name() const {
+    return config_.integrator;
+}
+
+void PhysicsWorld::set_dt(float dt) {
+    config_.dt = dt;
+}
+
+float PhysicsWorld::dt() const {
+    return config_.dt;
 }
 
 void PhysicsWorld::step() {

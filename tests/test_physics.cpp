@@ -247,6 +247,40 @@ void test_zero_bodies_safety() {
     }
 }
 
+void test_runtime_integrator_and_dt_switch() {
+    SimConfig cfg;
+    cfg.integrator = "euler";
+    cfg.dt = 0.001f;
+    PhysicsWorld world(cfg);
+
+    assert(world.integrator_name() == "euler");
+    assert(world.dt() == 0.001f);
+
+    std::vector<Body> bodies;
+    bodies.push_back(Body{1, 1000.0f, {0.f, 0.f}, {0.f, 0.f}, 10.0f});
+    bodies.push_back(Body{2, 1.0f, {100.f, 0.f}, {0.f, 5.0f}, 2.0f});
+    world.set_bodies(bodies);
+
+    // Swap integrator to rk4
+    world.set_integrator("rk4");
+    assert(world.integrator_name() == "rk4");
+    assert(world.body_count() == 2);
+    assert(world.bodies()[1].position.x == 100.f);
+
+    // Step with RK4
+    world.step();
+    assert(world.bodies()[1].position.x != 100.f || world.bodies()[1].position.y != 0.f);
+
+    // Update dt
+    world.set_dt(0.005f);
+    assert(world.dt() == 0.005f);
+
+    // Swap back to euler
+    world.set_integrator("euler");
+    assert(world.integrator_name() == "euler");
+    world.step();
+}
+
 int main() {
     test_two_body_attraction_euler();
     test_two_body_attraction_rk4();
@@ -261,6 +295,7 @@ int main() {
     test_collision_non_colliding_bodies();
     test_integrator_default_fallback();
     test_set_bodies_and_accessors();
+    test_runtime_integrator_and_dt_switch();
 
     std::cout << "All physics tests passed" << std::endl;
     return 0;

@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string>
 #include <vector>
 #include <SFML/System/Vector2.hpp>
 
@@ -16,6 +17,10 @@ public:
     void step();  // one fixed-timestep physics step
     const std::vector<Body>& bodies() const;
     std::size_t body_count() const;
+    void set_integrator(const std::string& name);
+    const std::string& integrator_name() const;
+    void set_dt(float dt);
+    float dt() const;
 
 private:
     SimConfig config_;
