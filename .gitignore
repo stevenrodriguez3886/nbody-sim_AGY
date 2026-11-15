@@ -1,2 +1,5 @@
 build/
+build-coverage/
 .superpowers/
+coverage-html/
+coverage.info
