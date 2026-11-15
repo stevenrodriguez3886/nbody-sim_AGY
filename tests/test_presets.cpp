@@ -145,6 +145,23 @@ void test_random_cloud() {
         assert(a.radius > 0.0f);
     }
 
+    // Verify neon color assignment in random cloud
+    assert(presets::kNeonPalette.size() == 10);
+    std::set<std::tuple<uint8_t, uint8_t, uint8_t>> distinct_colors;
+    for (const auto& body : cloud1) {
+        distinct_colors.insert({body.color.r, body.color.g, body.color.b});
+        bool matched_palette = false;
+        for (const auto& pal_col : presets::kNeonPalette) {
+            if (body.color.r == pal_col.r && body.color.g == pal_col.g && body.color.b == pal_col.b) {
+                matched_palette = true;
+                break;
+            }
+        }
+        assert(matched_palette);
+    }
+    // With 80 particles and 10 palette options, multiple colors should be present
+    assert(distinct_colors.size() >= 5);
+
     // Different seed produces different results
     auto cloud_diff = presets::create_random_cloud(cfg, 999);
     bool any_difference = (cloud1.size() != cloud_diff.size());

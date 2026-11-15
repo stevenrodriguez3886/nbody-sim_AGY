@@ -71,11 +71,38 @@ void test_merge_zero_mass() {
     assert(!std::isnan(m.velocity.x) && !std::isnan(m.velocity.y));
 }
 
+void test_merge_color_inheritance() {
+    ColorRGB orange{255, 107, 0};
+    ColorRGB blue{0, 210, 255};
+
+    // More massive body 'b' determines color
+    Body a{1, 10.0f, {0.f, 0.f}, {0.f, 0.f}, 5.f, orange};
+    Body b{2, 20.0f, {1.f, 0.f}, {0.f, 0.f}, 5.f, blue};
+    Body m1 = merge(a, b);
+    assert(m1.color.r == blue.r && m1.color.g == blue.g && m1.color.b == blue.b);
+
+    // More massive body 'a' determines color
+    Body c{3, 30.0f, {0.f, 0.f}, {0.f, 0.f}, 5.f, orange};
+    Body d{4, 15.0f, {1.f, 0.f}, {0.f, 0.f}, 5.f, blue};
+    Body m2 = merge(c, d);
+    assert(m2.color.r == orange.r && m2.color.g == orange.g && m2.color.b == orange.b);
+
+    // Equal mass -> tie breaks with smaller id (matching id preservation)
+    Body e{5, 10.0f, {0.f, 0.f}, {0.f, 0.f}, 5.f, orange};
+    Body f{6, 10.0f, {1.f, 0.f}, {0.f, 0.f}, 5.f, blue};
+    Body m3 = merge(e, f);
+    assert(m3.color.r == orange.r && m3.color.g == orange.g && m3.color.b == orange.b);
+
+    Body m4 = merge(f, e);
+    assert(m4.color.r == orange.r && m4.color.g == orange.g && m4.color.b == orange.b);
+}
+
 int main() {
     test_merge_mass_and_momentum();
     test_collision_detection();
     test_merge_equal_mass_preserves_id();
     test_merge_zero_mass();
+    test_merge_color_inheritance();
     std::cout << "All body tests passed" << std::endl;
     return 0;
 }

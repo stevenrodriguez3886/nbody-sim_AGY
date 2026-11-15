@@ -31,7 +31,7 @@ sf::Color color_for_body(const Body& body) {
     if (body.mass > 1000.0f) {
         return sf::Color::Yellow;
     }
-    return sf::Color::White;
+    return sf::Color(body.color.r, body.color.g, body.color.b);
 }
 
 } // namespace

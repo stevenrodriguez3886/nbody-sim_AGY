@@ -9,15 +9,30 @@
  */
 
 /**
+ * @struct ColorRGB
+ * @brief Simple 24-bit RGB color representation independent of graphics libraries.
+ */
+struct ColorRGB {
+    uint8_t r = 255;
+    uint8_t g = 255;
+    uint8_t b = 255;
+};
+
+/**
  * @struct Body
  * @brief Represents a single point-mass celestial body in 2D space.
  */
 struct Body {
-    uint64_t id;            ///< Unique identifier for the body.
-    float mass;             ///< Inertial and gravitational mass (arbitrary units).
-    sf::Vector2f position;  ///< Current position vector in physics coordinates (pixels).
-    sf::Vector2f velocity;  ///< Current velocity vector in physics coordinates (pixels/second).
-    float radius;           ///< Physical and visual collision radius (pixels).
+    uint64_t id = 0;            ///< Unique identifier for the body.
+    float mass = 0.0f;          ///< Inertial and gravitational mass (arbitrary units).
+    sf::Vector2f position;      ///< Current position vector in physics coordinates (pixels).
+    sf::Vector2f velocity;      ///< Current velocity vector in physics coordinates (pixels/second).
+    float radius = 0.0f;        ///< Physical and visual collision radius (pixels).
+    ColorRGB color = {255, 255, 255}; ///< Base RGB color (defaults to white).
+
+    Body() = default;
+    Body(uint64_t id_, float mass_, sf::Vector2f pos_, sf::Vector2f vel_, float rad_, ColorRGB col_ = {255, 255, 255})
+        : id(id_), mass(mass_), position(pos_), velocity(vel_), radius(rad_), color(col_) {}
 };
 
 /**

@@ -12,6 +12,11 @@
 namespace presets {
 
 /**
+ * @brief High-contrast neon color palette used for random cloud particle visualization.
+ */
+extern const std::vector<ColorRGB> kNeonPalette;
+
+/**
  * @brief Creates a deterministic two-body stable circular orbit scenario.
  *
  * Places a heavy central mass (M = 10000) at the coordinate center and an orbiting mass

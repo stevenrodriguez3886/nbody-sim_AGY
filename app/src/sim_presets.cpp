@@ -9,6 +9,19 @@
 
 namespace presets {
 
+const std::vector<ColorRGB> kNeonPalette = {
+    {255, 107, 0},   // Neon Orange
+    {0, 210, 255},   // Electric Blue
+    {57, 255, 20},   // Neon Green
+    {255, 23, 68},   // Neon Red
+    {255, 255, 0},   // Cyber / Neon Yellow
+    {180, 0, 255},   // Neon Purple / Violet
+    {255, 0, 128},   // Hot Pink / Magenta
+    {0, 255, 230},   // Bright Cyan / Aqua
+    {204, 255, 0},   // Bright Lime
+    {255, 170, 0}    // Neon Amber
+};
+
 std::vector<Body> create_stable_orbit(const SimConfig& cfg) {
     std::vector<Body> bodies;
     bodies.reserve(2);
@@ -131,6 +144,7 @@ std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
     std::uniform_real_distribution<float> dist_y(min_y, max_y);
     std::uniform_real_distribution<float> dist_v(-5.0f, 5.0f);
     std::uniform_real_distribution<float> dist_m(1.0f, 10.0f);
+    std::uniform_int_distribution<size_t> dist_color(0, kNeonPalette.size() - 1);
 
     for (size_t i = 0; i < num_particles; ++i) {
         const uint64_t id = static_cast<uint64_t>(i + 1);
@@ -139,8 +153,9 @@ std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
         const sf::Vector2f vel{dist_v(gen), dist_v(gen)};
         // Volume-proportional radius assuming constant material density: r ~ m^(1/3)
         const float radius = 2.0f * std::cbrt(mass);
+        const ColorRGB color = kNeonPalette[dist_color(gen)];
 
-        bodies.push_back(Body{id, mass, pos, vel, radius});
+        bodies.push_back(Body{id, mass, pos, vel, radius, color});
     }
 
     return bodies;
