@@ -37,39 +37,50 @@ The simulator currently requires CLI arguments to choose a scenario or integrato
 
 ## Design
 
-### 1. Sidebar Control Panel
+### 1. Top Menu Bar with Dropdowns
 
-**Layout:** A vertical panel on the **right** side of the window (my call — keeps the main sim area anchored to the left where the eye naturally starts). Width: ~220px. Background: semi-transparent dark rectangle (`sf::Color(30, 30, 30, 200)`).
+**Layout:** A horizontal bar across the **top** of the window. Height: ~35px. Background: solid dark rectangle (`sf::Color(30, 30, 30, 230)`).
 
-The simulation viewport is reduced to `window_width - sidebar_width` pixels wide. The `world_to_screen` coordinate mapping must account for this so bodies aren't drawn behind the panel.
+The simulation viewport starts below the menu bar (`y_offset = menu_bar_height`). The full window width is preserved for the simulation. The `world_to_screen` coordinate mapping adds the vertical offset so bodies aren't drawn behind the bar.
 
-**Widget system** — three simple widget types, all built from `sf::RectangleShape` + `sf::Text`:
+**Menu bar items (left to right):** "Scenario", "Integrator", "Timestep", and a "Pause" / "Resume" button on the far right.
 
-#### Button
-- Rectangular clickable area with centered label text.
-- Three visual states: normal (dark), hovered (lighter), active/selected (accent color).
-- Hover detection: check if mouse position is inside the button bounds.
-- Click detection: on `sf::Event::MouseButtonPressed`, check if the mouse is inside any button.
+**Widget system** — built from `sf::RectangleShape` + `sf::Text`:
 
-#### Button Group (radio-style selector)
-- A labeled row/column of Buttons where exactly one is selected at a time.
-- Used for: Scenario selector, Integrator selector.
-- Clicking a button deselects the previous one and triggers a callback/action.
+#### Menu Bar Item
+- A clickable text label in the top bar.
+- Two visual states: normal (text only) and open (highlighted background, dropdown visible below).
+- Clicking toggles the dropdown open/closed. Clicking a different menu item closes the previous dropdown and opens the new one. Clicking anywhere outside an open dropdown closes it.
 
-#### Stepper (+/- control)
-- A label showing the current value, flanked by "−" and "+" buttons.
-- Used for: Timestep control.
-- Clicking +/- adjusts the value by a defined step. Timestep values: cycle through a set of reasonable values (e.g., 0.0001, 0.0005, 0.001, 0.005, 0.01) rather than free-form increment, to avoid nonsensical values.
+#### Dropdown Menu
+- A vertical list of options that appears below its parent menu bar item when opened.
+- Background: solid dark rectangle matching the menu bar.
+- Each option is a row with hover highlighting.
+- The currently selected/active option has a checkmark or accent color indicator.
+- Clicking an option triggers its action and closes the dropdown.
 
-**Panel sections (top to bottom):**
+#### Dropdown Options per Menu:
 
-1. **Title:** "Controls" in bold/larger text.
-2. **Scenario** label, then 3 buttons stacked vertically: "Orbit", "Solar System", "Random Cloud". The currently active scenario is highlighted. Clicking a different one resets the simulation with that preset's bodies.
-3. **Integrator** label, then 2 buttons: "Euler", "RK4". Currently active one highlighted. Switching takes effect immediately on the next physics step (no reset).
-4. **Timestep** label, then a stepper showing the current `dt` value with +/- buttons.
-5. **Pause/Resume** button — mirrors the Space key behavior. Shows "Pause" or "Resume" depending on state.
+**Scenario dropdown:**
+- "Orbit" / "Solar System" / "Random Cloud"
+- Active preset has a visual indicator (accent color or checkmark).
+- Clicking a different preset resets the simulation with that preset's bodies.
 
-**Mouse event routing:** `SimulationApp::handle_events()` checks mouse clicks against sidebar widget bounds before doing anything else. If the click is inside the sidebar, it's consumed by the widget system. If outside, it's ignored (or reserved for future sim interaction).
+**Integrator dropdown:**
+- "Euler" / "RK4"
+- Active integrator has a visual indicator.
+- Switching takes effect immediately on the next physics step (no reset).
+
+**Timestep dropdown:**
+- A list of preset timestep values: 0.0001, 0.0005, 0.001, 0.005, 0.01
+- Active value has a visual indicator.
+- Selecting a value updates `dt` immediately.
+
+**Pause/Resume button:**
+- A simple button on the right end of the menu bar (not a dropdown).
+- Mirrors the Space key behavior. Label toggles between "⏸ Pause" and "▶ Resume".
+
+**Mouse event routing:** `SimulationApp::handle_events()` checks mouse clicks against menu bar and any open dropdown bounds first. If the click is inside a menu widget, it's consumed. If an open dropdown exists and the click is outside it (and outside the menu bar), the dropdown closes. Clicks in the simulation area below the menu bar are ignored (reserved for future interaction).
 
 ### 2. Background Starfield
 
@@ -113,11 +124,11 @@ The `sf::Font` member and `font_loaded_` flag can be kept since the sidebar widg
 
 **Integrator swap without reset (bodies keep current state):** Add a `set_integrator(const std::string&)` method to `PhysicsWorld` that reconstructs the internal `integrator_` unique_ptr without touching the body list. This is a minimal API addition that keeps physics independent and satisfies the "no reset on integrator change" requirement. *(My call — the builder check flagged this gap.)*
 
-### 6. Coordinate Mapping & Sidebar Viewport
+### 6. Coordinate Mapping & Menu Bar Viewport
 
-Currently `world_to_screen` is an identity function and presets place bodies using raw pixel coordinates centered on the full window (`window_width / 2`).
+Currently `world_to_screen` is an identity function and presets place bodies using raw pixel coordinates centered on the full window (`window_width / 2`, `window_height / 2`).
 
-**Approach:** Presets continue using the full `window_width` for body positioning (physics stays unaware of the sidebar). `world_to_screen` is updated to apply an offset and scale that maps the full physics coordinate space into the reduced viewport (the left portion of the window, `window_width - sidebar_width` pixels wide). This keeps the sidebar from covering active bodies without leaking UI concepts into physics code. *(My call — the builder check flagged this architectural seam.)*
+**Approach:** Since the menu bar only takes ~35px from the top, the impact is minimal. `world_to_screen` adds a vertical offset (`menu_bar_height`) to all positions so bodies render below the bar. Presets continue using the full `window_width` for horizontal centering. Vertical centering can use `window_height / 2` — the slight upward shift (~17px) from the menu bar is negligible. *(My call — much simpler than the sidebar approach the builder check originally flagged.)*
 
 ### 7. Keyboard Shortcuts
 
