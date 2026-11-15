@@ -71,10 +71,11 @@ std::vector<Body> create_solar_system(const SimConfig& cfg) {
     };
 
     const PlanetDef planets[] = {
-        { 80.0f, 1.0f, 3.0f},
-        {150.0f, 2.0f, 4.0f},
-        {240.0f, 5.0f, 6.0f},
-        {340.0f, 3.0f, 5.0f}
+        {  50.0f, 0.5f, 2.5f}, // Mercury
+        {  90.0f, 1.0f, 3.5f}, // Venus
+        { 125.0f, 1.0f, 4.0f}, // Earth
+        { 190.0f, 0.7f, 3.0f}, // Mars
+        { 340.0f, 8.0f, 8.0f}  // Jupiter
     };
 
     uint64_t next_id = 2;

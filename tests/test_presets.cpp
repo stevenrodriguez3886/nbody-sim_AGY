@@ -59,7 +59,7 @@ void test_solar_system() {
     cfg.G = 1.0f;
 
     auto bodies = presets::create_solar_system(cfg);
-    assert(bodies.size() >= 5); // 1 sun + at least 4 planets
+    assert(bodies.size() == 6); // 1 sun + 5 planets: Mercury, Venus, Earth, Mars, Jupiter
 
     const auto& sun = bodies[0];
     sf::Vector2f center(cfg.window_width * 0.5f, cfg.window_height * 0.5f);
@@ -69,6 +69,7 @@ void test_solar_system() {
     float prev_dist = 0.0f;
     std::set<uint64_t> ids;
     ids.insert(sun.id);
+    std::vector<float> dists;
 
     for (size_t i = 1; i < bodies.size(); ++i) {
         const auto& p = bodies[i];
@@ -84,6 +85,7 @@ void test_solar_system() {
         // Planets should be at increasing distances
         assert(dist > prev_dist);
         prev_dist = dist;
+        dists.push_back(dist);
 
         // Circular velocity v = sqrt(G * M / dist)
         float expected_v = std::sqrt(cfg.G * sun.mass / dist);
@@ -96,6 +98,14 @@ void test_solar_system() {
 
         assert(p.radius > 0.0f);
     }
+
+    // Increasing orbital gap jumps: outer jump d5 - d4 > 100.0f while inner gap d2 - d1 < 60.0f
+    assert((dists[4] - dists[3]) > 100.0f);
+    assert((dists[1] - dists[0]) < 60.0f);
+
+    // Distinct radii: Jupiter radius > Earth radius > Mercury radius
+    assert(bodies[5].radius > bodies[3].radius);
+    assert(bodies[3].radius > bodies[1].radius);
 }
 
 void test_random_cloud() {
