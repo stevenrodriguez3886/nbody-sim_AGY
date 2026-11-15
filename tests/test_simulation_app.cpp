@@ -43,8 +43,27 @@ void test_app_initialization_and_reset() {
     assert(app.world().body_count() >= 50);
 }
 
+void test_energy_tracking() {
+    SimConfig cfg;
+    cfg.window_width = 800;
+    cfg.window_height = 600;
+    cfg.preset = "orbit";
+    cfg.integrator = "euler";
+    cfg.dt = 0.001f;
+
+    SimulationApp app(cfg);
+    assert(app.initial_energy() != 0.0);
+    assert(std::abs(app.initial_energy() - app.world().compute_total_energy()) < 1e-5);
+    assert(std::abs(app.energy_percent_diff()) < 1e-5);
+
+    // After reset, initial energy should update to new scenario's starting energy
+    app.reset_preset("solar");
+    assert(std::abs(app.initial_energy() - app.world().compute_total_energy()) < 1e-5);
+}
+
 int main() {
     test_app_initialization_and_reset();
+    test_energy_tracking();
     std::cout << "All simulation app integration tests passed\n";
     return 0;
 }

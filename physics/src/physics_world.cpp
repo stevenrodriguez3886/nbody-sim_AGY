@@ -116,3 +116,42 @@ void PhysicsWorld::resolve_collisions() {
         }
     }
 }
+
+double PhysicsWorld::compute_kinetic_energy() const {
+    double total_ek = 0.0;
+    for (const auto& body : bodies_) {
+        const double vx = static_cast<double>(body.velocity.x);
+        const double vy = static_cast<double>(body.velocity.y);
+        const double v2 = vx * vx + vy * vy;
+        total_ek += 0.5 * static_cast<double>(body.mass) * v2;
+    }
+    return total_ek;
+}
+
+double PhysicsWorld::compute_potential_energy() const {
+    const std::size_t n = bodies_.size();
+    if (n <= 1) {
+        return 0.0;
+    }
+
+    const double eps2 = static_cast<double>(config_.epsilon) * static_cast<double>(config_.epsilon);
+    const double G = static_cast<double>(config_.G);
+    double total_ep = 0.0;
+
+    for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t j = i + 1; j < n; ++j) {
+            const double dx = static_cast<double>(bodies_[j].position.x - bodies_[i].position.x);
+            const double dy = static_cast<double>(bodies_[j].position.y - bodies_[i].position.y);
+            const double dist_sq = dx * dx + dy * dy + eps2;
+            const double dist = std::sqrt(dist_sq);
+            if (dist > 0.0) {
+                total_ep -= (G * static_cast<double>(bodies_[i].mass) * static_cast<double>(bodies_[j].mass)) / dist;
+            }
+        }
+    }
+    return total_ep;
+}
+
+double PhysicsWorld::compute_total_energy() const {
+    return compute_kinetic_energy() + compute_potential_energy();
+}

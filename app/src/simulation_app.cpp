@@ -3,6 +3,7 @@
 
 #include <SFML/Graphics/CircleShape.hpp>
 #include <SFML/Graphics/Color.hpp>
+#include <SFML/Graphics/Text.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/System/Time.hpp>
 #include <SFML/Window/Event.hpp>
@@ -10,8 +11,11 @@
 #include <SFML/Window/Mouse.hpp>
 #include <SFML/Window/VideoMode.hpp>
 
+#include <cmath>
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -110,6 +114,15 @@ void SimulationApp::reset_preset(const std::string& preset_name) {
     } else {
         world_.set_bodies(presets::create_stable_orbit(config_));
     }
+    initial_energy_ = world_.compute_total_energy();
+}
+
+double SimulationApp::energy_percent_diff() const {
+    if (std::abs(initial_energy_) < 1e-12) {
+        return 0.0;
+    }
+    const double current_e = world_.compute_total_energy();
+    return ((current_e - initial_energy_) / std::abs(initial_energy_)) * 100.0;
 }
 
 void SimulationApp::handle_events() {
@@ -177,10 +190,31 @@ void SimulationApp::render() {
         window_.draw(shape);
     }
 
-    // 3. Draw top menu bar and any open dropdown overlay on top of simulation
+    // 3. Draw live energy readout below menu bar
+    render_energy_overlay();
+
+    // 4. Draw top menu bar and any open dropdown overlay on top of simulation
     menu_bar_.render(window_);
 
     window_.display();
+}
+
+void SimulationApp::render_energy_overlay() {
+    if (!font_loaded_) {
+        return;
+    }
+    const double current_e = world_.compute_total_energy();
+    const double pct_diff = energy_percent_diff();
+
+    std::ostringstream oss;
+    oss << std::scientific << std::setprecision(4);
+    oss << "Energy: " << current_e << " | Initial: " << initial_energy_ << " | Diff: ";
+    oss << std::fixed << std::setprecision(2) << (pct_diff >= 0.0 ? "+" : "") << pct_diff << "%";
+
+    sf::Text text(font_, oss.str(), 14);
+    text.setFillColor(sf::Color(180, 220, 255));
+    text.setPosition({15.0f, menu_bar_.height() + 8.0f});
+    window_.draw(text);
 }
 
 void SimulationApp::run() {

@@ -42,6 +42,9 @@ public:
     bool is_font_loaded() const { return font_loaded_; }
     const MenuBar& menu_bar() const { return menu_bar_; }
     const Starfield& starfield() const { return starfield_; }
+    double initial_energy() const { return initial_energy_; }
+    double current_energy() const { return world_.compute_total_energy(); }
+    double energy_percent_diff() const;
 
     /**
      * @brief Resets the simulation bodies and configuration to the specified preset.
@@ -74,6 +77,7 @@ private:
     unsigned int ups_display_ = 0;              ///< Cached UPS metric displayed in window title.
     unsigned int fps_display_ = 0;              ///< Cached FPS metric displayed in window title.
     sf::Time title_timer_ = sf::seconds(0.5f);  ///< Timer tracking title update cadence.
+    double initial_energy_ = 0.0;               ///< Total system energy at scenario start or reset.
     Starfield starfield_;                       ///< Background starry sky renderer.
     MenuBar menu_bar_;                          ///< Top interactive control bar and dropdowns.
 
@@ -85,4 +89,7 @@ private:
 
     /** @brief Clears the window and draws the starfield, bodies, and menu bar in back-to-front order. */
     void render();
+
+    /** @brief Renders the live system energy and percentage diff overlay below the menu bar. */
+    void render_energy_overlay();
 };

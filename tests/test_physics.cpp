@@ -281,6 +281,62 @@ void test_runtime_integrator_and_dt_switch() {
     world.step();
 }
 
+void test_energy_calculations() {
+    SimConfig cfg;
+    cfg.G = 2.0f;
+    cfg.epsilon = 0.0f;
+    PhysicsWorld world(cfg);
+
+    // Body 1: m=2, v=(3, 4) -> v^2=25, Ek=25
+    // Body 2: m=4, v=(0, 0) -> Ek=0
+    // r_12 = (30, 40) -> dist = 50
+    // Ep = - G * m1 * m2 / r = - 2 * 2 * 4 / 50 = - 16 / 50 = -0.32
+    world.set_bodies({
+        {1, 2.0f, {0.f, 0.f}, {3.f, 4.f}, 1.f},
+        {2, 4.0f, {30.f, 40.f}, {0.f, 0.f}, 1.f}
+    });
+
+    double ek = world.compute_kinetic_energy();
+    assert(std::abs(ek - 25.0) < 1e-6);
+
+    double ep = world.compute_potential_energy();
+    assert(std::abs(ep - (-0.32)) < 1e-6);
+
+    double total = world.compute_total_energy();
+    assert(std::abs(total - (25.0 - 0.32)) < 1e-6);
+}
+
+void test_energy_conservation_rk4() {
+    SimConfig cfg;
+    cfg.G = 1.0f;
+    cfg.epsilon = 0.1f;
+    cfg.dt = 0.001f;
+    cfg.integrator = "rk4";
+    PhysicsWorld world(cfg);
+
+    // Stable circular orbit: M=1000 at (0,0), m=1 at (100,0), v = sqrt(G*M/r) = sqrt(10) ≈ 3.162277
+    const float M = 1000.0f;
+    const float m = 1.0f;
+    const float r = 100.0f;
+    const float v = std::sqrt(cfg.G * M / r);
+    world.set_bodies({
+        {1, M, {0.f, 0.f}, {0.f, 0.f}, 10.f},
+        {2, m, {r, 0.f}, {0.f, v}, 1.f}
+    });
+
+    const double initial_energy = world.compute_total_energy();
+    assert(initial_energy != 0.0);
+
+    for (int step = 0; step < 200; ++step) {
+        world.step();
+    }
+
+    const double final_energy = world.compute_total_energy();
+    const double rel_diff = std::abs((final_energy - initial_energy) / initial_energy);
+    // RK4 should conserve energy with extremely high accuracy (< 0.01% error over 200 steps)
+    assert(rel_diff < 1e-4);
+}
+
 int main() {
     test_two_body_attraction_euler();
     test_two_body_attraction_rk4();
@@ -296,6 +352,8 @@ int main() {
     test_integrator_default_fallback();
     test_set_bodies_and_accessors();
     test_runtime_integrator_and_dt_switch();
+    test_energy_calculations();
+    test_energy_conservation_rk4();
 
     std::cout << "All physics tests passed" << std::endl;
     return 0;

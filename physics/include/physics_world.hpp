@@ -59,6 +59,27 @@ public:
     void set_integrator(const std::string& name);
 
     /**
+     * @brief Computes the total kinetic energy of all active bodies:
+     * \f$ E_k = \frac{1}{2} \sum_i m_i |\mathbf{v}_i|^2 \f$.
+     * @return double Total kinetic energy.
+     */
+    double compute_kinetic_energy() const;
+
+    /**
+     * @brief Computes the total gravitational potential energy of all active body pairs:
+     * \f$ E_p = -\sum_{i < j} \frac{G \cdot m_i \cdot m_j}{\sqrt{|\mathbf{r}_j - \mathbf{r}_i|^2 + \epsilon^2}} \f$.
+     * @return double Total potential energy.
+     */
+    double compute_potential_energy() const;
+
+    /**
+     * @brief Computes the total mechanical energy of the system:
+     * \f$ E = E_k + E_p \f$.
+     * @return double Total mechanical energy.
+     */
+    double compute_total_energy() const;
+
+    /**
      * @brief Returns the name of the currently active numerical integrator.
      * @return const std::string& "euler" or "rk4".
      */
