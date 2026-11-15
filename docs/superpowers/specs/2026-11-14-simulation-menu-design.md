@@ -9,7 +9,7 @@ The simulator currently requires CLI arguments to choose a scenario or integrato
 
 ## Goals
 
-1. An always-visible sidebar control panel with mouse-clickable widgets for runtime configuration.
+1. An always-visible top menu bar with dropdowns and mouse-clickable widgets for runtime configuration.
 2. A static background starfield across all simulations for visual depth.
 3. Realistic solar system preset with exponential orbital spacing.
 4. HUD info (FPS, UPS, body count) moved to the window title bar; in-viewport HUD text removed.
@@ -88,7 +88,7 @@ A fixed set of small dots (200–400 points) scattered across the full window ar
 
 **Rendering:** Draw before bodies, after clearing the window. Each star is a small `sf::CircleShape` (radius 0.5–1.5px) in white or light gray with slight alpha variation for depth. Since the starfield is static and purely cosmetic, it can also be rendered as a `sf::VertexArray` of points for efficiency — builder's choice on which is simpler.
 
-The starfield covers the full window including behind the sidebar (the sidebar's semi-transparent background will dim the stars behind it naturally).
+The starfield covers the full window including behind the menu bar.
 
 ### 3. Solar System Preset Fix
 
@@ -104,7 +104,7 @@ Current distances: 80, 150, 240, 340 (roughly uniform ~70-100px gaps).
 | Mars     | 1.52    | 1.52  | ~190               |
 | Jupiter  | 5.20    | 5.20  | ~350 (if fits)     |
 
-The exact pixel distances should be scaled so the outermost planet fits comfortably within the sim viewport (accounting for the sidebar). The builder should calculate: `max_distance = (effective_viewport_width / 2) * 0.85` and scale the AU ratios to fit within that.
+The exact pixel distances should be scaled so the outermost planet fits comfortably within the sim viewport. The builder should calculate: `max_distance = (effective_viewport_height / 2) * 0.85` and scale the AU ratios to fit within that.
 
 Masses and radii should also have more variation to look distinct (Jupiter much larger than Mercury).
 
@@ -114,7 +114,7 @@ Replace the current `draw_hud()` rendered text with a periodic `window_.setTitle
 
 Format: `"N-Body Sim | FPS: 60 | UPS: 1000 | Bodies: 5 | Paused"` (omit "Paused" when running).
 
-The `sf::Font` member and `font_loaded_` flag can be kept since the sidebar widgets need the font for button labels. The `draw_hud()` method is removed.
+The `sf::Font` member and `font_loaded_` flag can be kept since the menu bar widgets need the font for labels. The `draw_hud()` method is removed.
 
 ### 5. PhysicsWorld Reset & Integrator Swap
 
@@ -133,17 +133,17 @@ Currently `world_to_screen` is an identity function and presets place bodies usi
 ### 7. Keyboard Shortcuts
 
 Existing shortcuts stay:
-- **Space** — pause/resume (also reflected in the sidebar Pause button state)
+- **Space** — pause/resume (also reflected in the menu bar Pause button state)
 - **Escape** — quit
 
-No new keyboard shortcuts needed — everything is in the sidebar.
+No new keyboard shortcuts needed — everything is in the top menu bar.
 
 ---
 
 ## What's Left to the Builder
 
-- Exact pixel positions and spacing of sidebar widgets (as long as they fit in ~220px width and don't overlap).
+- Exact pixel layout and padding of menu bar items and dropdown option boxes.
 - Whether to use `sf::VertexArray` or individual `sf::CircleShape` for the starfield.
 - Whether to reconstruct `PhysicsWorld` or add a `reset()` method.
-- Exact colors for button states (normal/hover/selected) — just make them visually distinct.
-- Font size for sidebar labels and buttons.
+- Exact colors for menu bar and dropdown states (normal/hover/selected) — just make them visually distinct and readable.
+- Font size for menu bar and dropdown options.
