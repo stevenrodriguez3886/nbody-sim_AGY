@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <random>
+#include <utility>
 
 Starfield::Starfield(unsigned int width, unsigned int height, std::size_t count, unsigned int seed) {
     if (count == 0) {
@@ -31,7 +32,7 @@ Starfield::Starfield(unsigned int width, unsigned int height, std::size_t count,
         star.setOrigin({radius, radius});
         star.setPosition({x, y});
         star.setFillColor(sf::Color(255, 255, 255, alpha));
-        shapes_.push_back(star);
+        shapes_.push_back(std::move(star));
     }
 }
 

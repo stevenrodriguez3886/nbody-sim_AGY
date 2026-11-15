@@ -55,7 +55,7 @@ SimulationApp::SimulationApp(SimConfig config)
     }
 
     if (!font_loaded_) {
-        std::cerr << "Warning: Could not load any font. HUD rendering will be disabled.\n";
+        std::cerr << "Warning: Could not load any font. Menu bar text labels will be disabled.\n";
     }
 
     menu_bar_ = MenuBar(static_cast<float>(config_.window_width), 35.0f, font_loaded_ ? &font_ : nullptr);
@@ -80,6 +80,7 @@ SimulationApp::SimulationApp(SimConfig config)
     menu_bar_.set_on_pause_toggled([this]() {
         paused_ = !paused_;
         menu_bar_.set_paused(paused_);
+        title_timer_ = sf::seconds(0.5f);
     });
 
     reset_preset(config_.preset);
@@ -116,6 +117,7 @@ void SimulationApp::handle_events() {
             } else if (key->scancode == sf::Keyboard::Scancode::Space || key->code == sf::Keyboard::Key::Space) {
                 paused_ = !paused_;
                 menu_bar_.set_paused(paused_);
+                title_timer_ = sf::seconds(0.5f);
             }
         }
     }
