@@ -5,8 +5,14 @@
 #include <cmath>
 #include <utility>
 
+/**
+ * @file physics_world.cpp
+ * @brief Implementation of physics world state, gravitational forces, and collision handling.
+ */
+
 PhysicsWorld::PhysicsWorld(SimConfig config)
     : config_(std::move(config)) {
+    // Instantiate selected integrator based on initial config
     set_integrator(config_.integrator);
 }
 
@@ -36,9 +42,12 @@ float PhysicsWorld::dt() const {
 }
 
 void PhysicsWorld::step() {
+    // 1. Advance state variables using the polymorphic integrator
     integrator_->step(bodies_, config_.dt, [this](const auto& positions, const auto& masses) {
         return compute_accelerations(positions, masses);
     });
+
+    // 2. Resolve any overlapping collisions resulting from the new positions
     resolve_collisions();
 }
 
@@ -60,19 +69,22 @@ std::vector<sf::Vector2f> PhysicsWorld::compute_accelerations(
         return accelerations;
     }
 
+    // Plummer softening length squared: avoids singular division by zero when particles get close
     const float eps2 = config_.epsilon * config_.epsilon;
 
+    // Pairwise N-body Newtonian gravity:
+    // a_i = sum_{j != i} G * m_j * (r_j - r_i) / (||r_j - r_i||^2 + eps^2)^(3/2)
     for (std::size_t i = 0; i < n; ++i) {
         for (std::size_t j = 0; j < n; ++j) {
             if (i == j) {
                 continue;
             }
-            sf::Vector2f r_ij = positions[j] - positions[i];
-            float r2 = r_ij.x * r_ij.x + r_ij.y * r_ij.y;
-            float dist_sq = r2 + eps2;
-            float denom = dist_sq * std::sqrt(dist_sq);
+            const sf::Vector2f r_ij = positions[j] - positions[i];
+            const float r2 = r_ij.x * r_ij.x + r_ij.y * r_ij.y;
+            const float dist_sq = r2 + eps2;
+            const float denom = dist_sq * std::sqrt(dist_sq); // (r^2 + eps^2)^(3/2)
             if (denom > 0.0f) {
-                float factor = (config_.G * masses[j]) / denom;
+                const float factor = (config_.G * masses[j]) / denom;
                 accelerations[i].x += factor * r_ij.x;
                 accelerations[i].y += factor * r_ij.y;
             }
@@ -83,6 +95,9 @@ std::vector<sf::Vector2f> PhysicsWorld::compute_accelerations(
 }
 
 void PhysicsWorld::resolve_collisions() {
+    // Greedy pairwise collision coalescence:
+    // When two bodies overlap, merge them into body i and remove body j.
+    // Repeat until no overlapping pairs remain.
     bool merged = true;
     while (merged) {
         merged = false;

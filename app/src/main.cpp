@@ -3,8 +3,17 @@
 #include <iostream>
 #include <string>
 
+/**
+ * @file main.cpp
+ * @brief Entry point for the N-Body gravity simulator executable.
+ */
+
 namespace {
 
+/**
+ * @brief Prints CLI usage and available launch-time command line options.
+ * @param prog_name Name of the executable binary.
+ */
 void print_help(const char* prog_name) {
     std::cout << "Usage: " << prog_name << " [options]\n\n"
               << "Options:\n"
@@ -15,9 +24,16 @@ void print_help(const char* prog_name) {
 
 } // namespace
 
+/**
+ * @brief Main execution function parsing CLI arguments and launching SimulationApp.
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @return int Process exit code (0 on success, non-zero on error).
+ */
 int main(int argc, char* argv[]) {
     SimConfig config;
 
+    // Parse command line arguments for initial launch configuration
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 
@@ -73,6 +89,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Launch application and enter SFML main loop
     SimulationApp app(config);
     app.run();
 

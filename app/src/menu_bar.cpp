@@ -7,6 +7,12 @@
 #include <cmath>
 #include <utility>
 
+/**
+ * @file menu_bar.cpp
+ * @brief Implementation of the MenuBar and dropdown UI widgets.
+ */
+
+// Preset options definitions for dropdown menus
 const std::vector<MenuBar::ScenarioOption> MenuBar::kScenarioOptions = {
     {"Orbit", "orbit"},
     {"Solar System", "solar"},
@@ -109,6 +115,7 @@ bool MenuBar::is_pause_hovered() const {
     return hovered_header_ == 3;
 }
 
+// Bounding box calculations for top bar headers and buttons
 sf::FloatRect MenuBar::get_scenario_header_rect() const {
     return sf::FloatRect({10.0f, 0.0f}, {140.0f, height_});
 }
@@ -163,6 +170,7 @@ int MenuBar::get_dropdown_item_count(DropdownType type) const {
 }
 
 bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button button) {
+    // Only primary (left) mouse clicks trigger UI actions
     if (button != sf::Mouse::Button::Left) {
         return false;
     }
@@ -171,7 +179,7 @@ bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button but
     if (open_dropdown_ != DropdownType::None) {
         sf::FloatRect drop_rect = get_dropdown_rect(open_dropdown_);
         if (drop_rect.contains(mouse_pos)) {
-            int idx = static_cast<int>((mouse_pos.y - height_) / kRowHeight);
+            const int idx = static_cast<int>((mouse_pos.y - height_) / kRowHeight);
             if (open_dropdown_ == DropdownType::Scenario) {
                 if (idx >= 0 && idx < static_cast<int>(kScenarioOptions.size())) {
                     selected_scenario_ = kScenarioOptions[idx].value;
@@ -202,7 +210,7 @@ bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button but
     // 2. Check if click is on the menu bar
     sf::FloatRect bar_rect({0.0f, 0.0f}, {width_, height_});
     if (bar_rect.contains(mouse_pos)) {
-        // Pause button
+        // Pause button toggle
         sf::FloatRect pause_rect = get_pause_button_rect();
         if (pause_rect.contains(mouse_pos)) {
             close_dropdowns();
@@ -213,7 +221,7 @@ bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button but
             return true;
         }
 
-        // Scenario header
+        // Scenario header click: toggle dropdown
         sf::FloatRect scn_rect = get_scenario_header_rect();
         if (scn_rect.contains(mouse_pos)) {
             open_dropdown_ = (open_dropdown_ == DropdownType::Scenario)
@@ -222,7 +230,7 @@ bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button but
             return true;
         }
 
-        // Integrator header
+        // Integrator header click: toggle dropdown
         sf::FloatRect ig_rect = get_integrator_header_rect();
         if (ig_rect.contains(mouse_pos)) {
             open_dropdown_ = (open_dropdown_ == DropdownType::Integrator)
@@ -231,7 +239,7 @@ bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button but
             return true;
         }
 
-        // Timestep header
+        // Timestep header click: toggle dropdown
         sf::FloatRect dt_rect = get_timestep_header_rect();
         if (dt_rect.contains(mouse_pos)) {
             open_dropdown_ = (open_dropdown_ == DropdownType::Timestep)
@@ -240,15 +248,16 @@ bool MenuBar::handle_mouse_pressed(sf::Vector2f mouse_pos, sf::Mouse::Button but
             return true;
         }
 
-        // Clicked on empty space within the menu bar
+        // Clicked on empty background within the menu bar
         close_dropdowns();
         return true;
     }
 
-    // 3. Click is outside the menu bar and outside the open dropdown
+    // 3. Click is outside the menu bar and outside the open dropdown:
+    // Dismiss the dropdown and consume the event so background simulation doesn't misfire
     if (open_dropdown_ != DropdownType::None) {
         close_dropdowns();
-        return true; // outside click dismisses dropdown and consumes event
+        return true;
     }
 
     return false;
@@ -258,6 +267,7 @@ void MenuBar::handle_mouse_moved(sf::Vector2f mouse_pos) {
     hovered_header_ = -1;
     hovered_dropdown_item_ = -1;
 
+    // Check header bar hover
     sf::FloatRect bar_rect({0.0f, 0.0f}, {width_, height_});
     if (bar_rect.contains(mouse_pos)) {
         if (get_scenario_header_rect().contains(mouse_pos)) {
@@ -271,11 +281,12 @@ void MenuBar::handle_mouse_moved(sf::Vector2f mouse_pos) {
         }
     }
 
+    // Check open dropdown row hover
     if (open_dropdown_ != DropdownType::None) {
         sf::FloatRect drop_rect = get_dropdown_rect(open_dropdown_);
         if (drop_rect.contains(mouse_pos)) {
-            int idx = static_cast<int>((mouse_pos.y - height_) / kRowHeight);
-            int max_items = get_dropdown_item_count(open_dropdown_);
+            const int idx = static_cast<int>((mouse_pos.y - height_) / kRowHeight);
+            const int max_items = get_dropdown_item_count(open_dropdown_);
             if (idx >= 0 && idx < max_items) {
                 hovered_dropdown_item_ = idx;
             }
@@ -284,23 +295,24 @@ void MenuBar::handle_mouse_moved(sf::Vector2f mouse_pos) {
 }
 
 void MenuBar::render(sf::RenderTarget& target) const {
-    // 1. Menu bar background
+    // 1. Menu bar background strip
     sf::RectangleShape bar({width_, height_});
     bar.setFillColor(sf::Color(30, 30, 30, 235));
     bar.setPosition({0.0f, 0.0f});
     target.draw(bar);
 
+    // Subtle bottom dividing line
     sf::RectangleShape divider({width_, 1.0f});
     divider.setFillColor(sf::Color(65, 65, 65, 255));
     divider.setPosition({0.0f, height_ - 1.0f});
     target.draw(divider);
 
-    // Helper to render a header item
+    // Lambda helper to render header labels with highlight states
     auto render_header = [&](const sf::FloatRect& rect,
                              const std::string& label,
                              int header_idx,
                              bool is_active) {
-        bool is_hovered = (hovered_header_ == header_idx);
+        const bool is_hovered = (hovered_header_ == header_idx);
         if (is_hovered || is_active) {
             sf::RectangleShape bg(rect.size);
             bg.setPosition(rect.position);
@@ -313,9 +325,9 @@ void MenuBar::render(sf::RenderTarget& target) const {
             sf::Text text(*font_, label, 14);
             text.setFillColor(is_active ? sf::Color(100, 200, 255)
                                         : (is_hovered ? sf::Color::White : sf::Color(210, 210, 210)));
-            sf::FloatRect bounds = text.getLocalBounds();
-            float tx = rect.position.x + 12.0f;
-            float ty = rect.position.y + (rect.size.y - bounds.size.y) / 2.0f - bounds.position.y;
+            const sf::FloatRect bounds = text.getLocalBounds();
+            const float tx = rect.position.x + 12.0f;
+            const float ty = rect.position.y + (rect.size.y - bounds.size.y) / 2.0f - bounds.position.y;
             text.setPosition({tx, ty});
             target.draw(text);
         }
@@ -325,11 +337,11 @@ void MenuBar::render(sf::RenderTarget& target) const {
     render_header(get_integrator_header_rect(), "Integrator", 1, open_dropdown_ == DropdownType::Integrator);
     render_header(get_timestep_header_rect(), "Timestep", 2, open_dropdown_ == DropdownType::Timestep);
 
-    // 2. Pause/Resume button
+    // 2. Pause/Resume button on the far right
     sf::FloatRect pause_rect = get_pause_button_rect();
     sf::RectangleShape btn_bg(pause_rect.size);
     btn_bg.setPosition(pause_rect.position);
-    bool pause_hovered = (hovered_header_ == 3);
+    const bool pause_hovered = (hovered_header_ == 3);
     if (paused_) {
         btn_bg.setFillColor(pause_hovered ? sf::Color(190, 85, 45, 245)
                                           : sf::Color(160, 65, 30, 230));
@@ -342,19 +354,19 @@ void MenuBar::render(sf::RenderTarget& target) const {
     target.draw(btn_bg);
 
     if (font_) {
-        std::string btn_label = paused_ ? "Resume" : "Pause";
+        const std::string btn_label = paused_ ? "Resume" : "Pause";
         sf::Text btn_text(*font_, btn_label, 14);
         btn_text.setFillColor(sf::Color::White);
-        sf::FloatRect bounds = btn_text.getLocalBounds();
-        float bx = pause_rect.position.x + (pause_rect.size.x - bounds.size.x) / 2.0f - bounds.position.x;
-        float by = pause_rect.position.y + (pause_rect.size.y - bounds.size.y) / 2.0f - bounds.position.y;
+        const sf::FloatRect bounds = btn_text.getLocalBounds();
+        const float bx = pause_rect.position.x + (pause_rect.size.x - bounds.size.x) / 2.0f - bounds.position.y;
+        const float by = pause_rect.position.y + (pause_rect.size.y - bounds.size.y) / 2.0f - bounds.position.y;
         btn_text.setPosition({bx, by});
         target.draw(btn_text);
     }
 
-    // 3. Dropdown (if open)
+    // 3. Render active dropdown overlay if currently open
     if (open_dropdown_ != DropdownType::None) {
-        sf::FloatRect drop_rect = get_dropdown_rect(open_dropdown_);
+        const sf::FloatRect drop_rect = get_dropdown_rect(open_dropdown_);
         sf::RectangleShape drop_bg(drop_rect.size);
         drop_bg.setPosition(drop_rect.position);
         drop_bg.setFillColor(sf::Color(32, 32, 32, 250));
@@ -362,12 +374,12 @@ void MenuBar::render(sf::RenderTarget& target) const {
         drop_bg.setOutlineColor(sf::Color(75, 75, 75, 255));
         target.draw(drop_bg);
 
-        int count = get_dropdown_item_count(open_dropdown_);
+        const int count = get_dropdown_item_count(open_dropdown_);
         for (int i = 0; i < count; ++i) {
-            sf::Vector2f row_pos = {drop_rect.position.x, drop_rect.position.y + static_cast<float>(i) * kRowHeight};
-            sf::Vector2f row_size = {drop_rect.size.x, kRowHeight};
+            const sf::Vector2f row_pos = {drop_rect.position.x, drop_rect.position.y + static_cast<float>(i) * kRowHeight};
+            const sf::Vector2f row_size = {drop_rect.size.x, kRowHeight};
 
-            bool row_hovered = (hovered_dropdown_item_ == i);
+            const bool row_hovered = (hovered_dropdown_item_ == i);
             bool row_selected = false;
             std::string label;
 
@@ -382,6 +394,7 @@ void MenuBar::render(sf::RenderTarget& target) const {
                 row_selected = (std::abs(selected_dt_ - kTimestepOptions[i].value) < 1e-6f);
             }
 
+            // Row hover background
             if (row_hovered) {
                 sf::RectangleShape row_bg(row_size);
                 row_bg.setPosition(row_pos);
@@ -389,6 +402,7 @@ void MenuBar::render(sf::RenderTarget& target) const {
                 target.draw(row_bg);
             }
 
+            // Selection marker indicator (left vertical accent bar)
             if (row_selected) {
                 sf::RectangleShape marker({3.0f, kRowHeight - 6.0f});
                 marker.setPosition({row_pos.x + 2.0f, row_pos.y + 3.0f});
@@ -396,13 +410,14 @@ void MenuBar::render(sf::RenderTarget& target) const {
                 target.draw(marker);
             }
 
+            // Row option label text
             if (font_) {
                 sf::Text row_text(*font_, label, 13);
                 row_text.setFillColor(row_selected ? sf::Color(100, 200, 255)
                                                    : (row_hovered ? sf::Color::White : sf::Color(210, 210, 210)));
-                sf::FloatRect bounds = row_text.getLocalBounds();
-                float rx = row_pos.x + 12.0f;
-                float ry = row_pos.y + (kRowHeight - bounds.size.y) / 2.0f - bounds.position.y;
+                const sf::FloatRect bounds = row_text.getLocalBounds();
+                const float rx = row_pos.x + 12.0f;
+                const float ry = row_pos.y + (kRowHeight - bounds.size.y) / 2.0f - bounds.position.y;
                 row_text.setPosition({rx, ry});
                 target.draw(row_text);
             }

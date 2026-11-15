@@ -16,8 +16,17 @@
 #include <utility>
 #include <vector>
 
+/**
+ * @file simulation_app.cpp
+ * @brief Implementation of SimulationApp and application event/render loops.
+ */
+
 namespace {
 
+/**
+ * @brief Helper determining body render color based on mass threshold.
+ * Massive central bodies (stars) render in yellow; smaller bodies render in white.
+ */
 sf::Color color_for_body(const Body& body) {
     if (body.mass > 1000.0f) {
         return sf::Color::Yellow;
@@ -36,7 +45,7 @@ SimulationApp::SimulationApp(SimConfig config)
     window_.setFramerateLimit(60);
     window_.setKeyRepeatEnabled(false);
 
-    // Candidate system font paths
+    // Probe standard cross-platform system font directories
     const std::vector<std::string> font_candidates = {
         "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
         "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -58,13 +67,16 @@ SimulationApp::SimulationApp(SimConfig config)
         std::cerr << "Warning: Could not load any font. Menu bar text labels will be disabled.\n";
     }
 
+    // Initialize MenuBar layout with font pointer (if loaded)
     menu_bar_ = MenuBar(static_cast<float>(config_.window_width), 35.0f, font_loaded_ ? &font_ : nullptr);
 
+    // Sync initial state indicators
     menu_bar_.set_selected_scenario(config_.preset);
     menu_bar_.set_selected_integrator(config_.integrator);
     menu_bar_.set_selected_dt(config_.dt);
     menu_bar_.set_paused(paused_);
 
+    // Wire UI callbacks to application/physics actions
     menu_bar_.set_on_scenario_changed([this](const std::string& scenario) {
         reset_preset(scenario);
     });
@@ -80,9 +92,10 @@ SimulationApp::SimulationApp(SimConfig config)
     menu_bar_.set_on_pause_toggled([this]() {
         paused_ = !paused_;
         menu_bar_.set_paused(paused_);
-        title_timer_ = sf::seconds(0.5f);
+        title_timer_ = sf::seconds(0.5f); // Force immediate window title update
     });
 
+    // Populate bodies for starting preset and initialize title
     reset_preset(config_.preset);
     update_title_bar(sf::Time::Zero);
 }
@@ -100,24 +113,28 @@ void SimulationApp::reset_preset(const std::string& preset_name) {
 }
 
 void SimulationApp::handle_events() {
+    // SFML 3 std::optional event polling model
     while (const std::optional event = window_.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
             window_.close();
         } else if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>()) {
-            sf::Vector2f pos(static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y));
+            // Forward mouse click to MenuBar; if consumed, do not pass to simulation
+            const sf::Vector2f pos(static_cast<float>(mouse->position.x), static_cast<float>(mouse->position.y));
             if (menu_bar_.handle_mouse_pressed(pos, mouse->button)) {
                 // Event consumed by menu bar
             }
         } else if (const auto* move = event->getIf<sf::Event::MouseMoved>()) {
-            sf::Vector2f pos(static_cast<float>(move->position.x), static_cast<float>(move->position.y));
+            // Forward mouse hover movement to MenuBar
+            const sf::Vector2f pos(static_cast<float>(move->position.x), static_cast<float>(move->position.y));
             menu_bar_.handle_mouse_moved(pos);
         } else if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+            // Keyboard shortcut handling
             if (key->scancode == sf::Keyboard::Scancode::Escape || key->code == sf::Keyboard::Key::Escape) {
                 window_.close();
             } else if (key->scancode == sf::Keyboard::Scancode::Space || key->code == sf::Keyboard::Key::Space) {
                 paused_ = !paused_;
                 menu_bar_.set_paused(paused_);
-                title_timer_ = sf::seconds(0.5f);
+                title_timer_ = sf::seconds(0.5f); // Force immediate title update
             }
         }
     }
@@ -128,6 +145,7 @@ void SimulationApp::update() {
 }
 
 sf::Vector2f SimulationApp::world_to_screen(sf::Vector2f world_pos) const {
+    // Offset Y by menu bar height (35px) so bodies render below the top bar
     return {world_pos.x, world_pos.y + menu_bar_.height()};
 }
 
@@ -147,8 +165,10 @@ void SimulationApp::update_title_bar(sf::Time elapsed) {
 void SimulationApp::render() {
     window_.clear(sf::Color::Black);
 
+    // 1. Draw static background starfield
     starfield_.render(window_);
 
+    // 2. Draw celestial bodies in physics space, projected via world_to_screen
     for (const auto& body : world_.bodies()) {
         sf::CircleShape shape(body.radius);
         shape.setFillColor(color_for_body(body));
@@ -157,6 +177,7 @@ void SimulationApp::render() {
         window_.draw(shape);
     }
 
+    // 3. Draw top menu bar and any open dropdown overlay on top of simulation
     menu_bar_.render(window_);
 
     window_.display();
@@ -169,11 +190,13 @@ void SimulationApp::run() {
 
     while (window_.isOpen()) {
         sf::Time frame_time = clock.restart();
-        // Cap frame_time to avoid spiral of death
+
+        // Clamp frame_time to 0.1s to avoid spiral-of-death under CPU load
         if (frame_time > sf::seconds(0.1f)) {
             frame_time = sf::seconds(0.1f);
         }
 
+        // Aggregate FPS and UPS metrics over 1-second rolling windows
         fps_timer += frame_time;
         if (fps_timer >= sf::seconds(1.0f)) {
             fps_display_ = fps_count_;
@@ -190,6 +213,7 @@ void SimulationApp::run() {
             break;
         }
 
+        // Fixed-timestep physics integration decoupled from render frame rate
         if (!paused_) {
             const float dt = (world_.dt() > 0.0f) ? world_.dt() : 0.001f;
             const sf::Time physics_dt = sf::seconds(dt);

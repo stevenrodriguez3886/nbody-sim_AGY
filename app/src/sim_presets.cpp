@@ -2,12 +2,18 @@
 #include <cmath>
 #include <random>
 
+/**
+ * @file sim_presets.cpp
+ * @brief Implementations of simulation preset generator functions.
+ */
+
 namespace presets {
 
 std::vector<Body> create_stable_orbit(const SimConfig& cfg) {
     std::vector<Body> bodies;
     bodies.reserve(2);
 
+    // Place central body at physical center of the window
     const sf::Vector2f center(
         static_cast<float>(cfg.window_width) * 0.5f,
         static_cast<float>(cfg.window_height) * 0.5f
@@ -20,10 +26,10 @@ std::vector<Body> create_stable_orbit(const SimConfig& cfg) {
     const float orbiter_radius = 4.0f;
     const float distance = 200.0f;
 
-    // Circular orbit speed: v = sqrt(G * M / d)
+    // Circular orbit speed balancing gravitational acceleration: v = sqrt(G * M / d)
     const float speed = std::sqrt(cfg.G * central_mass / distance);
 
-    // Central body at center of physics space
+    // Central body at center of physics space with zero initial velocity
     bodies.push_back(Body{
         1,
         central_mass,
@@ -32,7 +38,7 @@ std::vector<Body> create_stable_orbit(const SimConfig& cfg) {
         central_radius
     });
 
-    // Orbiter at (center.x + distance, center.y) with perpendicular velocity
+    // Orbiter at (center.x + distance, center.y) with perpendicular tangential velocity
     bodies.push_back(Body{
         2,
         orbiter_mass,
@@ -47,6 +53,7 @@ std::vector<Body> create_stable_orbit(const SimConfig& cfg) {
 std::vector<Body> create_solar_system(const SimConfig& cfg) {
     std::vector<Body> bodies;
 
+    // Central sun position
     const sf::Vector2f center(
         static_cast<float>(cfg.window_width) * 0.5f,
         static_cast<float>(cfg.window_height) * 0.5f
@@ -64,6 +71,8 @@ std::vector<Body> create_solar_system(const SimConfig& cfg) {
         sun_radius
     });
 
+    // Planetary definitions with exponential AU distance ratios and realistic radii:
+    // Mercury (0.39 AU), Venus (0.72 AU), Earth (1.00 AU), Mars (1.52 AU), Jupiter (5.20 AU scaled)
     struct PlanetDef {
         float distance;
         float mass;
@@ -80,6 +89,7 @@ std::vector<Body> create_solar_system(const SimConfig& cfg) {
 
     uint64_t next_id = 2;
     for (const auto& p : planets) {
+        // Orbital speed for circular trajectory around the central sun
         const float speed = std::sqrt(cfg.G * sun_mass / p.distance);
         bodies.push_back(Body{
             next_id++,
@@ -100,6 +110,7 @@ std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
     std::vector<Body> bodies;
     bodies.reserve(num_particles);
 
+    // Inset padding (5%) to prevent immediate border clipping
     float pad_x = static_cast<float>(cfg.window_width) * 0.05f;
     float max_x = static_cast<float>(cfg.window_width) - pad_x;
     float min_x = pad_x;
@@ -126,6 +137,7 @@ std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
         const float mass = dist_m(gen);
         const sf::Vector2f pos{dist_x(gen), dist_y(gen)};
         const sf::Vector2f vel{dist_v(gen), dist_v(gen)};
+        // Volume-proportional radius assuming constant material density: r ~ m^(1/3)
         const float radius = 2.0f * std::cbrt(mass);
 
         bodies.push_back(Body{id, mass, pos, vel, radius});
