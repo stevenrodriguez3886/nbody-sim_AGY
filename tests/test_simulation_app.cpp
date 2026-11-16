@@ -3,6 +3,25 @@
 #include <cassert>
 #include <iostream>
 
+bool clouds_differ(const std::vector<Body>& first, const std::vector<Body>& second) {
+    if (first.size() != second.size()) {
+        return true;
+    }
+
+    for (size_t i = 0; i < first.size(); ++i) {
+        if (first[i].position != second[i].position ||
+            first[i].velocity != second[i].velocity ||
+            first[i].mass != second[i].mass ||
+            first[i].color.r != second[i].color.r ||
+            first[i].color.g != second[i].color.g ||
+            first[i].color.b != second[i].color.b) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void test_app_initialization_and_reset() {
     SimConfig cfg;
     cfg.window_width = 800;
@@ -21,6 +40,10 @@ void test_app_initialization_and_reset() {
 
     app.reset_preset("random");
     assert(app.world().body_count() >= 50);
+    const auto first_random_cloud = app.world().bodies();
+
+    app.reset_preset("random");
+    assert(clouds_differ(first_random_cloud, app.world().bodies()));
 
     // Test integrator swapping on app world
     app.world_mut().set_integrator("rk4");

@@ -1,6 +1,7 @@
 #include "sim_presets.hpp"
 #include <cmath>
-#include <random>
+#include <iostream>
+#include <stacktrace>
 
 /**
  * @file sim_presets.cpp
@@ -117,10 +118,12 @@ std::vector<Body> create_solar_system(const SimConfig& cfg) {
 }
 
 std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
-    std::mt19937 gen(seed);
+
+    std::vector<Body> bodies;
+
 
     const size_t num_particles = 80;
-    std::vector<Body> bodies;
+    
     bodies.reserve(num_particles);
 
     // Inset padding (5%) to prevent immediate border clipping
@@ -146,16 +149,39 @@ std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed) {
     std::uniform_real_distribution<float> dist_m(1.0f, 10.0f);
     std::uniform_int_distribution<size_t> dist_color(0, kNeonPalette.size() - 1);
 
-    for (size_t i = 0; i < num_particles; ++i) {
-        const uint64_t id = static_cast<uint64_t>(i + 1);
-        const float mass = dist_m(gen);
-        const sf::Vector2f pos{dist_x(gen), dist_y(gen)};
-        const sf::Vector2f vel{dist_v(gen), dist_v(gen)};
-        // Volume-proportional radius assuming constant material density: r ~ m^(1/3)
-        const float radius = 2.0f * std::cbrt(mass);
-        const ColorRGB color = kNeonPalette[dist_color(gen)];
+    std::cout << "SEED: " <<  seed << std::endl;
 
-        bodies.push_back(Body{id, mass, pos, vel, radius, color});
+    if (seed > 0) {
+        std::cout << "in pseudorandom land" << std::endl;
+        // user defined seed (same randomness every time)
+        std::mt19937 gen(seed);
+            for (size_t i = 0; i < num_particles; ++i) {
+                const uint64_t id = static_cast<uint64_t>(i + 1);
+                const float mass = dist_m(gen);
+                const sf::Vector2f pos{dist_x(gen), dist_y(gen)};
+                const sf::Vector2f vel{dist_v(gen), dist_v(gen)};
+                // Volume-proportional radius assuming constant material density: r ~ m^(1/3)
+                const float radius = 2.0f * std::cbrt(mass);
+                const ColorRGB color = kNeonPalette[dist_color(gen)];
+
+                bodies.push_back(Body{id, mass, pos, vel, radius, color});
+            }
+    }
+    else {
+        std::cout << "this should be random" << std::endl;
+        std::random_device rd;
+        std::mt19937 gen(rd());
+            for (size_t i = 0; i < num_particles; ++i) {
+                const uint64_t id = static_cast<uint64_t>(i + 1);
+                const float mass = dist_m(gen);
+                const sf::Vector2f pos{dist_x(gen), dist_y(gen)};
+                const sf::Vector2f vel{dist_v(gen), dist_v(gen)};
+                // Volume-proportional radius assuming constant material density: r ~ m^(1/3)
+                const float radius = 2.0f * std::cbrt(mass);
+                const ColorRGB color = kNeonPalette[dist_color(gen)];
+
+                bodies.push_back(Body{id, mass, pos, vel, radius, color});
+            }
     }
 
     return bodies;

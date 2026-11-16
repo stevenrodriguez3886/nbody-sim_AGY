@@ -114,7 +114,7 @@ void test_random_cloud() {
     cfg.window_height = 720;
 
     auto cloud1 = presets::create_random_cloud(cfg, 42);
-    auto cloud2 = presets::create_random_cloud(cfg, 42);
+    auto cloud2 = presets::create_random_cloud(cfg,42);
 
     // Deterministic: identical size and values
     assert(cloud1.size() >= 50 && cloud1.size() <= 100);
@@ -163,7 +163,7 @@ void test_random_cloud() {
     assert(distinct_colors.size() >= 5);
 
     // Different seed produces different results
-    auto cloud_diff = presets::create_random_cloud(cfg, 999);
+    auto cloud_diff = presets::create_random_cloud(cfg);
     bool any_difference = (cloud1.size() != cloud_diff.size());
     if (!any_difference) {
         for (size_t i = 0; i < cloud1.size(); ++i) {

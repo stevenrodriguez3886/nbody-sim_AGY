@@ -1,8 +1,11 @@
-#pragma once
+#ifndef SIM_PRESETS
+#define SIM_PRESETS
 
 #include <vector>
+#include <random>
 #include "body.hpp"
 #include "sim_config.hpp"
+
 
 /**
  * @file sim_presets.hpp
@@ -50,6 +53,11 @@ std::vector<Body> create_solar_system(const SimConfig& cfg);
  * @param seed Pseudo-random generator seed for deterministic generation.
  * @return std::vector<Body> Vector of 80 randomly distributed bodies.
  */
-std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed = 42);
+
+
+std::vector<Body> create_random_cloud(const SimConfig& cfg, unsigned int seed = -1);
 
 } // namespace presets
+
+
+#endif

@@ -110,7 +110,7 @@ void SimulationApp::reset_preset(const std::string& preset_name) {
     if (preset_name == "solar") {
         world_.set_bodies(presets::create_solar_system(config_));
     } else if (preset_name == "random") {
-        world_.set_bodies(presets::create_random_cloud(config_));
+        world_.set_bodies(presets::create_random_cloud(config_, 0));
     } else {
         world_.set_bodies(presets::create_stable_orbit(config_));
     }
