@@ -36,7 +36,7 @@ public:
     /**
      * @brief Executes one fixed-timestep physics update:
      * 1. Integrates positions and velocities using the active integrator over timestep dt.
-     * 2. Resolves overlapping particle collisions via completely inelastic coalescing merges.
+     * 2. Resolves overlapping particle collisions via elastic billiard ball collisions.
      */
     void step();
 
@@ -114,7 +114,7 @@ private:
         const std::vector<float>& masses) const;
 
     /**
-     * @brief Detects and resolves geometric overlaps between bodies through inelastic merging.
+     * @brief Detects and resolves collisions between bodies through elastic billiard ball collisions.
      */
     void resolve_collisions();
 };

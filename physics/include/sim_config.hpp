@@ -13,7 +13,7 @@
  * @brief Holds tunable constants, algorithmic selections, and window geometry.
  */
 struct SimConfig {
-    float G = 1000.0f;                     ///< Gravitational constant scaling pairwise force magnitude.
+    float G = 1500.0f;                     ///< Gravitational constant scaling pairwise force magnitude.
     float epsilon = 5.0f;               ///< Softening parameter (pixels) avoiding singularities at r -> 0.
     float dt = 0.01f;                   ///< Fixed integration timestep (seconds) per physics step.
     unsigned int window_width = 1280;   ///< Initial window width in screen pixels.

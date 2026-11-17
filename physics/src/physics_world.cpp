@@ -95,23 +95,13 @@ std::vector<sf::Vector2f> PhysicsWorld::compute_accelerations(
 }
 
 void PhysicsWorld::resolve_collisions() {
-    // Greedy pairwise collision coalescence:
-    // When two bodies overlap, merge them into body i and remove body j.
-    // Repeat until no overlapping pairs remain.
-    bool merged = true;
-    while (merged) {
-        merged = false;
-        for (std::size_t i = 0; i < bodies_.size(); ++i) {
-            for (std::size_t j = i + 1; j < bodies_.size(); ++j) {
-                if (check_collision(bodies_[i], bodies_[j])) {
-                    bodies_[i] = merge(bodies_[i], bodies_[j]);
-                    bodies_.erase(bodies_.begin() + j);
-                    merged = true;
-                    break;
-                }
-            }
-            if (merged) {
-                break;
+    // Pairwise elastic billiard ball collision resolution:
+    // When bodies collide and are approaching each other, an elastic impulse is applied
+    // along the collision normal to conserve linear momentum and kinetic energy.
+    for (std::size_t i = 0; i < bodies_.size(); ++i) {
+        for (std::size_t j = i + 1; j < bodies_.size(); ++j) {
+            if (check_collision(bodies_[i], bodies_[j])) {
+                resolve_elastic_collision(bodies_[i], bodies_[j]);
             }
         }
     }

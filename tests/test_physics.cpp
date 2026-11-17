@@ -56,40 +56,84 @@ void test_two_body_attraction_rk4() {
     assert(b[1].velocity.x < 0.f);
 }
 
-void test_collision_merge_reduces_count() {
+void test_collision_elastic_preserves_count() {
     SimConfig cfg;
-    cfg.G = 1.0f;
+    cfg.G = 0.0f; // isolate collision dynamics from gravity
     cfg.epsilon = 0.1f;
     cfg.dt = 0.01f;
     cfg.integrator = "euler";
     PhysicsWorld world(cfg);
-    // Two bodies overlapping -> should merge
+
+    // Two bodies heading toward each other and overlapping
     world.set_bodies({
-        {1, 10.f, {0.f, 0.f}, {1.f, 0.f}, 5.f},
-        {2, 10.f, {3.f, 0.f}, {-1.f, 0.f}, 5.f}  // distance 3 < 5+5
+        {1, 10.f, {0.f, 0.f}, {5.f, 0.f}, 5.f},
+        {2, 10.f, {8.f, 0.f}, {-5.f, 0.f}, 5.f}  // distance 8 < 5+5
     });
+
     world.step();
-    assert(world.body_count() == 1);
-    assert(world.bodies()[0].mass == 20.f);
+
+    // With elastic collisions, both bodies are preserved (no coalescing merge)
+    assert(world.body_count() == 2);
+    const auto& b = world.bodies();
+    assert(b[0].id == 1 && b[1].id == 2);
+
+    // Velocities should have bounced (reversed along x)
+    assert(b[0].velocity.x < 0.f);
+    assert(b[1].velocity.x > 0.f);
 }
 
-void test_collision_chain_merge() {
+void test_collision_elastic_energy_and_momentum() {
     SimConfig cfg;
-    cfg.G = 1.0f;
+    cfg.G = 0.0f;
     cfg.epsilon = 0.1f;
     cfg.dt = 0.01f;
     cfg.integrator = "euler";
     PhysicsWorld world(cfg);
-    // Three bodies overlapping in a chain:
-    // Body 1 at (0, 0) r=5, Body 2 at (4, 0) r=5, Body 3 at (8, 0) r=5
+
     world.set_bodies({
-        {1, 10.f, {0.f, 0.f}, {0.f, 0.f}, 5.f},
-        {2, 10.f, {4.f, 0.f}, {0.f, 0.f}, 5.f},
-        {3, 10.f, {8.f, 0.f}, {0.f, 0.f}, 5.f}
+        {1, 8.f, {0.f, 0.f}, {3.f, 1.f}, 4.f},
+        {2, 12.f, {7.f, 1.f}, {-2.f, 0.f}, 5.f} // distance ≈ 7.07 < 9
     });
+
+    const double initial_ke = world.compute_kinetic_energy();
+    const float initial_px = 8.f * 3.f + 12.f * (-2.f);
+    const float initial_py = 8.f * 1.f + 12.f * 0.f;
+
     world.step();
-    assert(world.body_count() == 1);
-    assert(world.bodies()[0].mass == 30.f);
+
+    assert(world.body_count() == 2);
+    const auto& b = world.bodies();
+
+    // Linear momentum conservation
+    const float final_px = b[0].mass * b[0].velocity.x + b[1].mass * b[1].velocity.x;
+    const float final_py = b[0].mass * b[0].velocity.y + b[1].mass * b[1].velocity.y;
+    assert(std::abs(final_px - initial_px) < 1e-3f);
+    assert(std::abs(final_py - initial_py) < 1e-3f);
+
+    // Kinetic energy conservation
+    const double final_ke = world.compute_kinetic_energy();
+    assert(std::abs(final_ke - initial_ke) < 1e-3);
+}
+
+void test_collision_multi_body_bounce() {
+    SimConfig cfg;
+    cfg.G = 0.0f;
+    cfg.epsilon = 0.1f;
+    cfg.dt = 0.01f;
+    cfg.integrator = "euler";
+    PhysicsWorld world(cfg);
+
+    // Three bodies overlapping in a line
+    world.set_bodies({
+        {1, 10.f, {0.f, 0.f}, {1.f, 0.f}, 5.f},
+        {2, 10.f, {4.f, 0.f}, {0.f, 0.f}, 5.f},
+        {3, 10.f, {8.f, 0.f}, {-1.f, 0.f}, 5.f}
+    });
+
+    world.step();
+
+    // All three bodies remain
+    assert(world.body_count() == 3);
 }
 
 void test_single_body_no_crash() {
@@ -341,8 +385,9 @@ int main() {
     test_two_body_attraction_euler();
     test_two_body_attraction_rk4();
     test_circular_orbit_stability_rk4();
-    test_collision_merge_reduces_count();
-    test_collision_chain_merge();
+    test_collision_elastic_preserves_count();
+    test_collision_elastic_energy_and_momentum();
+    test_collision_multi_body_bounce();
     test_single_body_no_crash();
     test_single_body_euler();
     test_empty_world();

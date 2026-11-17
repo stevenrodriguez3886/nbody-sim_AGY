@@ -5,47 +5,46 @@
 
 /**
  * @file body.cpp
- * @brief Implementation of body merging and collision detection routines.
+ * @brief Implementation of elastic collision resolution and collision detection routines.
  */
 
-Body merge(const Body& a, const Body& b) {
+void resolve_elastic_collision(Body& a, Body& b) {
+    const float dx = b.position.x - a.position.x;
+    const float dy = b.position.y - a.position.y;
+    const float dist = std::hypot(dx, dy);
+    const float min_dist = a.radius + b.radius;
+
+    // Strict inequality: only resolve if bodies overlap
+    if (dist >= min_dist) {
+        return;
+    }
+
+    // Determine normal vector from a to b; handle degenerate zero-distance case
+    sf::Vector2f normal(1.0f, 0.0f);
+    if (dist > 1e-6f) {
+        normal.x = dx / dist;
+        normal.y = dy / dist;
+    }
+
+    // Elastic velocity impulse resolution (along collision normal)
+    const sf::Vector2f rel_vel = b.velocity - a.velocity;
+    const float v_normal = rel_vel.x * normal.x + rel_vel.y * normal.y;
+
+    // If bodies are already separating, do not apply a repulsive impulse
+    if (v_normal >= 0.0f) {
+        return;
+    }
+
     const float total_mass = a.mass + b.mass;
-    sf::Vector2f new_position;
-    sf::Vector2f new_velocity;
-
-    // Weight position and velocity by mass (center of mass and conservation of linear momentum)
+    float factor_a = 1.0f;
+    float factor_b = 1.0f;
     if (total_mass > 0.0f) {
-        new_position = (a.mass * a.position + b.mass * b.position) / total_mass;
-        new_velocity = (a.mass * a.velocity + b.mass * b.velocity) / total_mass;
-    } else {
-        // Fallback for massless particles: geometric midpoint and mean velocity
-        new_position = 0.5f * (a.position + b.position);
-        new_velocity = 0.5f * (a.velocity + b.velocity);
+        factor_a = 2.0f * b.mass / total_mass;
+        factor_b = 2.0f * a.mass / total_mass;
     }
 
-    // Preserve 2D disc area: pi * r_new^2 = pi * r_a^2 + pi * r_b^2 -> r_new = sqrt(r_a^2 + r_b^2)
-    const float new_radius = std::sqrt(a.radius * a.radius + b.radius * b.radius);
-
-    // Retain ID and color of the dominant progenitor body; break ties deterministically with smaller ID
-    uint64_t new_id;
-    ColorRGB new_color;
-    if (a.mass > b.mass) {
-        new_id = a.id;
-        new_color = a.color;
-    } else if (b.mass > a.mass) {
-        new_id = b.id;
-        new_color = b.color;
-    } else {
-        if (a.id <= b.id) {
-            new_id = a.id;
-            new_color = a.color;
-        } else {
-            new_id = b.id;
-            new_color = b.color;
-        }
-    }
-
-    return Body{new_id, total_mass, new_position, new_velocity, new_radius, new_color};
+    a.velocity += factor_a * v_normal * normal;
+    b.velocity -= factor_b * v_normal * normal;
 }
 
 bool check_collision(const Body& a, const Body& b) {

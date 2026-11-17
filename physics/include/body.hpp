@@ -36,20 +36,19 @@ struct Body {
 };
 
 /**
- * @brief Merges two bodies upon collision into a single composite body.
+ * @brief Resolves a fully elastic 2D collision between two circular bodies.
  *
- * Implements a completely inelastic collision conserving linear momentum and mass:
- * - Total mass: \f$ m_{new} = m_a + m_b \f$
- * - Center of mass position: \f$ \mathbf{r}_{new} = \frac{m_a \mathbf{r}_a + m_b \mathbf{r}_b}{m_{new}} \f$
- * - Momentum-conserved velocity: \f$ \mathbf{v}_{new} = \frac{m_a \mathbf{v}_a + m_b \mathbf{v}_b}{m_{new}} \f$
- * - Combined radius conserving 2D surface area: \f$ R_{new} = \sqrt{R_a^2 + R_b^2} \f$
- * - ID inheritance: Inherits the ID of the more massive progenitor (or smaller ID if tied).
+ * Implements hard-sphere (billiard ball) collision dynamics:
+ * - Momentum and kinetic energy conservation: Calculates 2D elastic impulse along
+ *   the collision normal to update particle velocities.
+ * - Tangential velocity components remain unaffected.
+ * - Particle positions are not artificially translated, avoiding non-physical potential energy injection.
+ * - Preserves body identities, masses, colors, and radii without merging.
  *
- * @param a First colliding body.
- * @param b Second colliding body.
- * @return Body The resulting coalesced body.
+ * @param a First colliding body (modified in-place: velocity).
+ * @param b Second colliding body (modified in-place: velocity).
  */
-Body merge(const Body& a, const Body& b);
+void resolve_elastic_collision(Body& a, Body& b);
 
 /**
  * @brief Checks whether two bodies overlap geometrically in 2D space.
